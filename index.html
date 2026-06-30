@@ -730,19 +730,59 @@ let user=JSON.parse(localStorage.getItem('nf_user')||'null');
 let allMovies={},adBlockCount=0,deferredPrompt=null,wpCurrentCode='',wpCurrentMovie=null,aiChatHistory=[],wpMembers=[];
 const GENRES=[{id:28,name:'Боевики',en:'Action',emoji:'💥'},{id:12,name:'Приключения',en:'Adventure',emoji:'🗺️'},{id:16,name:'Мультфильмы',en:'Animation',emoji:'🎨'},{id:35,name:'Комедии',en:'Comedy',emoji:'😂'},{id:80,name:'Криминал',en:'Crime',emoji:'🔍'},{id:99,name:'Документальные',en:'Documentary',emoji:'📽️'},{id:18,name:'Драмы',en:'Drama',emoji:'🎭'},{id:14,name:'Фэнтези',en:'Fantasy',emoji:'🧙'},{id:27,name:'Ужасы',en:'Horror',emoji:'👻'},{id:9648,name:'Мистика',en:'Mystery',emoji:'🔮'},{id:10749,name:'Романтика',en:'Romance',emoji:'❤️'},{id:878,name:'Фантастика',en:'Sci-Fi',emoji:'🚀'},{id:53,name:'Триллеры',en:'Thriller',emoji:'😰'},{id:10752,name:'Военные',en:'War',emoji:'⚔️'}];
 
-window.addEventListener('DOMContentLoaded',async()=>{
-  initAdblocker(); initPWA(); initNotifications();
+// hideLoader объявлен в глобальной области — гарантированно сработает
+// независимо от того, успели ли загрузиться данные с TMDB
+let loaderHidden=false;
+function hideLoader(){
+  if(loaderHidden) return;
+  loaderHidden=true;
+  const l=document.getElementById('loader');
+  if(l){ l.classList.add('hide'); setTimeout(()=>{ try{ l.remove(); }catch(e){} },500); }
+}
+// Жёсткий предохранитель: что бы ни случилось с сетью/API — экран загрузки
+// исчезнет максимум через 6 секунд. Это гарантия от "вечного" зависания.
+setTimeout(hideLoader,6000);
+
+// Оборачиваем fetch-запрос в таймаут, чтобы один зависший запрос
+// не блокировал весь Promise.all навсегда
+function withTimeout(promise,ms){
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),ms))
+  ]);
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  try{
+    initAdblocker(); initPWA(); initNotifications();
+  }catch(e){ console.error('Init error:',e); }
   if(user) showUserUI();
   updateProfileStats();
   ['ls1','ls2','ls3','ls4'].forEach((s,i)=>setTimeout(()=>{const el=document.getElementById(s);if(el)el.classList.add('show');},300+i*350));
-  await Promise.all([loadHero(),loadPopular(),loadTopRated(),loadNowPlaying(),loadUpcoming()]);
-  renderGenreFilters(); updateStats();
-  const hideLoader=()=>{const l=document.getElementById('loader');if(l){l.classList.add('hide');setTimeout(()=>{try{l.remove();}catch(e){}},500);}};
-  setTimeout(hideLoader,1800);
-  window.addEventListener('load',()=>setTimeout(hideLoader,300));
+
+  // Promise.allSettled вместо Promise.all — один упавший запрос
+  // больше не блокирует остальные и не вешает загрузку навсегда
+  Promise.allSettled([
+    withTimeout(loadHero(),5000),
+    withTimeout(loadPopular(),5000),
+    withTimeout(loadTopRated(),5000),
+    withTimeout(loadNowPlaying(),5000),
+    withTimeout(loadUpcoming(),5000),
+  ]).then(results=>{
+    results.forEach((r,i)=>{ if(r.status==='rejected') console.warn('Секция не загрузилась:',i,r.reason); });
+    try{ renderGenreFilters(); }catch(e){}
+    try{ updateStats(); }catch(e){}
+    setTimeout(hideLoader,400);
+  }).catch(()=>{
+    // На случай если allSettled сам по себе не поддерживается (очень старый браузер)
+    hideLoader();
+  });
+
   setTimeout(()=>pushNotif('🔥 Добро пожаловать!','Кинотеатр загружен. Попробуйте ИИ-рекомендации!','info'),3500);
   setTimeout(()=>pushNotif('🤖 NeuroFilm AI','Спросите ИИ о любом фильме — это бесплатно!','ai'),7000);
 });
+
+window.addEventListener('load',()=>setTimeout(hideLoader,300));
 
 // ── ADBLOCKER ──
 function initAdblocker(){
@@ -762,11 +802,15 @@ function initAdblocker(){
   window.addEventListener('beforeunload', function(e) {
     e.stopImmediatePropagation();
   }, true);
-  // Защищаем от location.href редиректов из iframe (Content Security Policy через meta)
-  const cspMeta = document.createElement('meta');
-  cspMeta.httpEquiv = 'Content-Security-Policy';
-  cspMeta.content = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; frame-src *; navigate-to 'self' https://player.videasy.net https://www.2embed.cc https://autoembed.cc https://moviesapi.club https://api.themoviedb.org https://image.tmdb.org https://fonts.googleapis.com https://fonts.gstatic.com;";
-  document.head.appendChild(cspMeta);
+  // ПРИМЕЧАНИЕ: ранее здесь была CSP-инъекция через meta-тег с директивой
+  // navigate-to и ограниченным списком доменов. Она удалена, так как:
+  // 1) navigate-to работает только в Chrome/Edge и блокирует навигацию,
+  //    а НЕ fetch()-запросы — то есть защиты от казино-редиректов не давала
+  // 2) В Safari/старых WebView неизвестные CSP-директивы трактуются
+  //    непредсказуемо и могли блокировать легитимные запросы к TMDB API,
+  //    вызывая "Failed to fetch" на ВСЕХ запросах одновременно
+  // Защита от попап-редиректов на казино уже обеспечена перехватом
+  // window.open выше — этого достаточно, отдельный CSP не нужен.
   const adP=[/doubleclick/,/googlesyndication/,/adservice/,/pagead/,/adsystem/,/popunder/,/trafficjunky/,/exoclick/,/juicyads/,/ero-advertising/,/adnxs/,/criteo/,/outbrain/,/taboola/,/media\.net/,/adform/,/smartadserver/,/yandex\.ru\/an\//];
   const oF=window.fetch;
   window.fetch=function(url,...a){if(adP.some(p=>p.test(String(url)))){adBlockCount++;return Promise.resolve(new Response('',{status:204}));}return oF.apply(this,[url,...a]);};
@@ -840,7 +884,7 @@ async function askAI(quickMsg){
 
   let reply = '';
   try {
-    const resp = await fetch(\`\${GEMINI_API}?key=\${GEMINI_KEY}\`, {
+    const resp = await fetch(`${GEMINI_API}?key=${GEMINI_KEY}`, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -978,20 +1022,66 @@ function addAIMsg(text,role){
 }
 
 // ── TMDB ──
-async function tmdb(path,extra={}){
+// Счётчик последовательных сетевых сбоев — используем для показа баннера
+let tmdbFailStreak = 0;
+let networkBannerShown = false;
+
+async function tmdb(path,extra={},retryCount=0){
   const p=new URLSearchParams({
     api_key:TMDB_KEY,
     language:'ru-RU',
     region:'RU',
     ...extra
   });
-  return fetch(`${TMDB}${path}?${p}`).then(r=>r.json());
+  const fullUrl = `${TMDB}${path}?${p}`;
+  try{
+    const r=await fetch(fullUrl);
+    if(!r.ok){
+      console.warn('TMDB HTTP-ошибка:',r.status,path);
+      return {results:[],total_results:0};
+    }
+    tmdbFailStreak = 0;
+    hideNetworkBanner();
+    return await r.json();
+  }catch(e){
+    // "Failed to fetch" — запрос не дошёл до сервера вообще:
+    // нет интернета, домен заблокирован сетью/расширением, либо DNS-сбой.
+    // Это НЕ ошибка кода — браузер не смог установить соединение.
+    console.warn('TMDB запрос не удался:',path,'—',e.message);
+    // Один автоматический повтор через 1.5 сек на случай временного сбоя сети
+    if(retryCount===0){
+      await new Promise(res=>setTimeout(res,1500));
+      return tmdb(path,extra,1);
+    }
+    tmdbFailStreak++;
+    if(tmdbFailStreak>=3) showNetworkBanner();
+    return {results:[],total_results:0};
+  }
+}
+
+// Баннер: показывается только если ВСЕ запросы реально не проходят —
+// явный сигнал пользователю в чём дело, вместо тихого пустого каталога
+function showNetworkBanner(){
+  if(networkBannerShown) return;
+  networkBannerShown = true;
+  const b=document.createElement('div');
+  b.id='network-error-banner';
+  b.style.cssText='position:fixed;top:64px;left:0;right:0;z-index:9998;background:linear-gradient(135deg,#7c2d12,#991b1b);color:#fff;padding:12px 20px;text-align:center;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+  b.innerHTML='⚠️ Не удаётся подключиться к базе фильмов (api.themoviedb.org). Проверьте интернет-соединение или отключите блокировщик рекламы/VPN для этого сайта. <button onclick="location.reload()" style="margin-left:10px;background:#fff;color:#991b1b;border:none;padding:5px 12px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px;">Обновить</button>';
+  document.body.appendChild(b);
+}
+function hideNetworkBanner(){
+  const b=document.getElementById('network-error-banner');
+  if(b) b.remove();
+  networkBannerShown = false;
 }
 
 // ── HERO ──
 async function loadHero(){
   const d=await tmdb('/movie/popular',{page:1});
-  heroMovies=d.results.slice(0,6);renderHeroDots();setHero(0);
+  heroMovies=(d&&d.results||[]).slice(0,6);
+  if(!heroMovies.length) return;
+  renderHeroDots();setHero(0);
   heroTimer=setInterval(()=>{heroIdx=(heroIdx+1)%heroMovies.length;setHero(heroIdx);},7000);
 }
 function setHero(i){
@@ -1014,10 +1104,10 @@ function setHero(i){
 function renderHeroDots(){document.getElementById('hero-dots').innerHTML=heroMovies.map((m,i)=>`<div class="hero-slide-dot${i===0?' active':''}" onclick="setHero(${i})"></div>`).join('');}
 
 // ── MOVIES ──
-async function loadPopular(){const d=await tmdb('/movie/popular');const c=document.getElementById('popular-scroll');c.innerHTML='';d.results.forEach(m=>{allMovies[m.id]=m;c.appendChild(createCard(m));});}
-async function loadTopRated(){const d=await tmdb('/movie/top_rated');const c=document.getElementById('top-grid');c.innerHTML='';d.results.slice(0,12).forEach(m=>{allMovies[m.id]=m;c.appendChild(createCard(m));});}
-async function loadNowPlaying(){const d=await tmdb('/movie/now_playing');const c=document.getElementById('cinema-scroll');c.innerHTML='';d.results.forEach(m=>{allMovies[m.id]=m;c.appendChild(createCard(m));});}
-async function loadUpcoming(){const d=await tmdb('/movie/upcoming');const c=document.getElementById('upcoming-scroll');c.innerHTML='';d.results.forEach(m=>{allMovies[m.id]=m;c.appendChild(createCard(m));});}
+async function loadPopular(){const d=await tmdb('/movie/popular');const c=document.getElementById('popular-scroll');if(!c)return;c.innerHTML='';(d&&d.results||[]).forEach(m=>{allMovies[m.id]=m;c.appendChild(createCard(m));});}
+async function loadTopRated(){const d=await tmdb('/movie/top_rated');const c=document.getElementById('top-grid');if(!c)return;c.innerHTML='';(d&&d.results||[]).slice(0,12).forEach(m=>{allMovies[m.id]=m;c.appendChild(createCard(m));});}
+async function loadNowPlaying(){const d=await tmdb('/movie/now_playing');const c=document.getElementById('cinema-scroll');if(!c)return;c.innerHTML='';(d&&d.results||[]).forEach(m=>{allMovies[m.id]=m;c.appendChild(createCard(m));});}
+async function loadUpcoming(){const d=await tmdb('/movie/upcoming');const c=document.getElementById('upcoming-scroll');if(!c)return;c.innerHTML='';(d&&d.results||[]).forEach(m=>{allMovies[m.id]=m;c.appendChild(createCard(m));});}
 
 // ── CARD ──
 function createCard(m){
@@ -1563,7 +1653,7 @@ function initTelegramWidget(){
   const script=document.createElement('script');
   script.async=true;
   script.src='https://telegram.org/js/telegram-widget.js?22';
-  script.dataset.telegramLogin='NeuroFilmBOT';
+  script.dataset.telegramLogin='NeuroFilmRuBot';
   script.dataset.size='large';
   script.dataset.radius='8';
   script.dataset.onauth='onTelegramAuth(user)';
