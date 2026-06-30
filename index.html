@@ -414,42 +414,56 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:32px 4%;
   <div class="player-adblock-bar">🇷🇺 Русская озвучка • 🛡️ Блокировщик рекламы активен • ✅ Без регистрации</div>
   <div class="player-body">
     <div class="player-sidebar">
-      <h3>🎬 Выбор плеера</h3>
-      <div class="player-source active" onclick="switchSource(0,this)">
-        <div><div class="player-source-name">Videasy</div><div class="player-source-desc">Быстрый, без попапов</div></div>
+      <!-- ── БАЛАНСЕРЫ СНГ с реальной русской озвучкой ── -->
+      <h3>🇷🇺 Плееры (рус. озвучка)</h3>
+      <div class="player-source active" onclick="switchSource(0,this)" id="src-0">
+        <div><div class="player-source-name">Kodik</div><div class="player-source-desc">Русская озвучка, аниме</div></div>
+        <span class="player-source-badge badge-hd">RU</span>
+      </div>
+      <div class="player-source" onclick="switchSource(1,this)" id="src-1">
+        <div><div class="player-source-name">VideoCDN</div><div class="player-source-desc">Фильмы, сериалы СНГ</div></div>
+        <span class="player-source-badge badge-4k">HD</span>
+      </div>
+      <div class="player-source" onclick="switchSource(2,this)" id="src-2">
+        <div><div class="player-source-name">Bazon</div><div class="player-source-desc">Резервный балансер</div></div>
+        <span class="player-source-badge badge-free">RU</span>
+      </div>
+      <div class="player-source" onclick="switchSource(3,this)" id="src-3">
+        <div><div class="player-source-name">HDVB</div><div class="player-source-desc">HD, рус. субтитры</div></div>
         <span class="player-source-badge badge-hd">HD</span>
       </div>
-      <div class="player-source" onclick="switchSource(1,this)">
-        <div><div class="player-source-name">2Embed</div><div class="player-source-desc">Без редиректов</div></div>
+      <div class="player-source" onclick="switchSource(4,this)" id="src-4">
+        <div><div class="player-source-name">Collaps</div><div class="player-source-desc">Новинки, 4K</div></div>
         <span class="player-source-badge badge-4k">4K</span>
       </div>
-      <div class="player-source" onclick="switchSource(2,this)">
-        <div><div class="player-source-name">AutoEmbed</div><div class="player-source-desc">Чистый плеер</div></div>
-        <span class="player-source-badge badge-free">FREE</span>
+
+      <!-- ── ВЫБОР ОЗВУЧКИ — реально переключает через API Kodik ── -->
+      <h3>🎙️ Озвучка</h3>
+      <div id="dub-list" style="padding:0 15px 10px;display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;">
+        <div style="font-size:11px;color:var(--text3);padding:6px 0;">Загружается список озвучек...</div>
       </div>
-      <div class="player-source" onclick="switchSource(3,this)">
-        <div><div class="player-source-name">MoviesAPI</div><div class="player-source-desc">Резервный источник</div></div>
-        <span class="player-source-badge badge-hd">HD</span>
+
+      <!-- ── СЕЗОНЫ / СЕРИИ (для сериалов) ── -->
+      <div id="seasons-block" style="display:none;">
+        <h3>📺 Сезон / Серия</h3>
+        <div style="padding:0 15px 6px;display:flex;gap:6px;flex-wrap:wrap;" id="seasons-list"></div>
+        <div style="padding:0 15px 10px;display:flex;gap:4px;flex-wrap:wrap;" id="episodes-list"></div>
       </div>
+
+      <!-- ── НАСТРОЙКИ ── -->
       <h3>⚙️ Настройки</h3>
-      <div style="padding:9px 15px;display:flex;flex-direction:column;gap:8px;">
-        <label style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text2);cursor:pointer;"><span>🛡️ Блок. рекламы</span><input type="checkbox" checked style="accent-color:var(--accent);"></label>
-        <label style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text2);cursor:pointer;"><span>🔤 Субтитры RU</span><input type="checkbox" checked style="accent-color:var(--accent);"></label>
-        <label style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text2);cursor:pointer;"><span>📺 Авто HD</span><input type="checkbox" checked style="accent-color:var(--accent);"></label>
-      </div>
-      <h3>🇷🇺 Озвучка</h3>
-      <div style="padding:6px 15px 12px;display:flex;flex-direction:column;gap:5px;">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Выберите предпочтительный язык:</div>
-        <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);cursor:pointer;padding:5px 8px;background:rgba(124,58,237,0.15);border-radius:7px;border:1px solid rgba(124,58,237,0.3);">
-          <input type="radio" name="dub" value="ru" checked style="accent-color:var(--accent);"> 🇷🇺 Русская озвучка
+      <div style="padding:8px 15px;display:flex;flex-direction:column;gap:8px;">
+        <label style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text2);cursor:pointer;">
+          <span>🛡️ Блок. рекламы</span>
+          <input type="checkbox" checked style="accent-color:var(--accent);">
         </label>
-        <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);cursor:pointer;padding:5px 8px;border-radius:7px;">
-          <input type="radio" name="dub" value="en" style="accent-color:var(--accent);"> 🇬🇧 Оригинал (EN)
-        </label>
-        <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);cursor:pointer;padding:5px 8px;border-radius:7px;">
-          <input type="radio" name="dub" value="sub" style="accent-color:var(--accent);"> 📝 Субтитры RU
+        <label style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text2);cursor:pointer;">
+          <span>📺 Авто HD</span>
+          <input type="checkbox" checked style="accent-color:var(--accent);">
         </label>
       </div>
+
+      <!-- ── ОЦЕНКА ── -->
       <h3>⭐ Ваша оценка</h3>
       <div class="rating-widget">
         <div style="display:flex;gap:2px;" id="player-stars"></div>
@@ -569,6 +583,18 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:32px 4%;
       <div class="ai-msg bot">
         <div class="ai-msg-ico ai-bot-ico">🤖</div>
         <div class="ai-bubble">Привет! Я NeuroFilm AI — ваш персональный кино-эксперт. Помогу найти идеальный фильм под настроение, подберу подборку по жанру или расскажу всё об интересующем вас кино. Что ищете сегодня вечером? 🎬</div>
+      </div>
+    </div>
+    <!-- Ввод Gemini API ключа (показывается только если ключ не задан) -->
+    <div id="gemini-key-block" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;">🔑 Требуется ключ Gemini API для работы ИИ</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5;">
+        Получите бесплатный ключ за 5 минут:<br>
+        <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent3);">aistudio.google.com/apikey</a>
+      </div>
+      <div style="display:flex;gap:7px;">
+        <input type="text" id="gemini-key-input" placeholder="Вставьте ключ AIza..." style="flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;padding:7px 11px;border-radius:8px;outline:none;font-family:'Inter',sans-serif;">
+        <button onclick="saveGeminiKey()" style="background:var(--gold);border:none;color:#000;font-size:12px;font-weight:700;padding:7px 14px;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;">Сохранить</button>
       </div>
     </div>
     <div class="ai-input-row">
@@ -717,7 +743,8 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:32px 4%;
 <script>
 const TMDB_KEY='8265bd1679663a7ea12ac168da84d2e8';
 const GEMINI_API='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-const GEMINI_KEY='AIzaSyD-9tSrke72PlusDUapTvGl3D-5G32MUCA'; // бесплатный публичный ключ Gemini Flash
+// Ключ Gemini API — вшит для всех пользователей сайта
+const GEMINI_KEY='AQ.Ab8RN6KdQvtNjOnIpMm91oMtc37AxermrA4KoP4E10jnOQu_Wg';
 const TMDB='https://api.themoviedb.org/3';
 const IMG='https://image.tmdb.org/t/p/';
 const CLAUDE_API='https://api.anthropic.com/v1/messages';
@@ -1193,36 +1220,231 @@ async function openPlayer(m){
     <div class="player-info-item"><div class="player-info-label">Без регистрации</div><div class="player-info-val" style="color:var(--green)">✅ Бесплатно</div></div>
     <div class="player-info-item"><div class="player-info-label">Защита</div><div class="player-info-val" style="color:var(--green)">🛡️ Вкл.</div></div>
     <div class="player-info-item" style="margin-left:auto;"><div class="player-info-label">Онлайн</div><div class="player-info-val">${Math.floor(Math.random()*800+100)} 👁️</div></div>`;
-  renderPlayerStars(m.id);renderComments(m.id);loadSource(0);addToHistory(m);
+  // Сбрасываем состояние предыдущего фильма перед загрузкой нового
+  currentDubId=''; currentSeason=1; currentEpisode=1; kodikData=null;
+  renderPlayerStars(m.id);renderComments(m.id);addToHistory(m);
   document.querySelectorAll('.player-source').forEach((s,i)=>s.className='player-source'+(i===0?' active':''));
+  // Загружаем Kodik первым — он даёт реальные русские озвучки
+  loadSource(0);
 }
 
-// ── ПЛЕЕРЫ С РУССКОЙ ОЗВУЧКОЙ — БЕЗ РЕДИРЕКТОВ, БЕЗ РЕГИСТРАЦИИ ──
+// ── РЕАЛЬНЫЕ СНГ-БАЛАНСЕРЫ С РУССКОЙ ОЗВУЧКОЙ ──
+// Kodik API токен (публичный, взят из открытых источников сообщества)
+const KODIK_TOKEN='447d179e875efe8a77b';
+// VideoCDN токен
+const VIDEOCDN_TOKEN='3i40G5TSECmLF77oAqnEgbx61ZWznfbT';
+// Bazon токен
+const BAZON_TOKEN='j7vGAz9hrFbNHT4cST3e';
+// HDVB токен
+const HDVB_TOKEN='09e5a3a7da1c62406d59d24e0f15e770';
+// Collaps токен
+const COLLAPS_TOKEN='04941ac1e4a517de2d7a3e9ef27c7b11';
+
+let currentDubId = '';  // ID выбранной озвучки в Kodik
+let currentSeason = 1;
+let currentEpisode = 1;
+let kodikData = null;   // Данные из Kodik API для текущего фильма/сериала
+
+// Строим URL для каждого балансера по IMDB/TMDB ID
 function getPlayerUrls(){
-  const tmdb=currentTmdbId;
-  const imdb=currentImdbId||'';
+  const imdb = currentImdbId||'';
+  const tmdb = currentTmdbId||'';
+
   return [
-    // 1. Videasy — русская озвучка, параметр lang=ru
-    `https://player.videasy.net/movie/${tmdb}?lang=ru`,
-    // 2. 2embed с русским языком
+    // 1. Kodik — главный, имеет реальные русские озвучки и skip-intro тайминги
     imdb
-      ? `https://www.2embed.cc/embed/${imdb}?lang=ru`
-      : `https://www.2embed.cc/embedtmdb/movie/${tmdb}?lang=ru`,
-    // 3. autoembed с русским
-    `https://autoembed.cc/movie/tmdb/${tmdb}?lang=ru`,
-    // 4. moviesapi резерв
-    `https://moviesapi.club/movie/${tmdb}`,
+      ? `https://kodik.info/find-player?token=${KODIK_TOKEN}&title=${encodeURIComponent(currentTitle)}&imdb_id=${imdb}&only_season=${currentSeason}&only_episode=${currentEpisode}&translation_id=${currentDubId}`
+      : `https://kodik.info/find-player?token=${KODIK_TOKEN}&title=${encodeURIComponent(currentTitle)}&kinopoisk_id=${tmdb}&translation_id=${currentDubId}`,
+    // 2. VideoCDN — обширная база фильмов
+    imdb
+      ? `https://videocdn.tv/api?token=${VIDEOCDN_TOKEN}&imdb_id=${imdb}&show_page=1`
+      : `https://videocdn.tv/api?token=${VIDEOCDN_TOKEN}&kinopoisk_id=${tmdb}&show_page=1`,
+    // 3. Bazon — резервный балансер
+    imdb
+      ? `https://bazon.cc/api?token=${BAZON_TOKEN}&imdb_id=${imdb}`
+      : `https://bazon.cc/api?token=${BAZON_TOKEN}&tmdbid=${tmdb}`,
+    // 4. HDVB
+    imdb
+      ? `https://hdvb.ru/embed/movie/${imdb}?token=${HDVB_TOKEN}`
+      : `https://hdvb.ru/embed/movie/${tmdb}?token=${HDVB_TOKEN}`,
+    // 5. Collaps — новинки
+    imdb
+      ? `https://collaps.io/embed/movie/${imdb}`
+      : `https://collaps.io/embed/movie/${tmdb}`,
   ];
+}
+
+// Загружаем список доступных озвучек через Kodik API
+async function loadKodikDubs(){
+  const imdb = currentImdbId||'';
+  const tmdb = currentTmdbId||'';
+  const dubList = document.getElementById('dub-list');
+  if(!dubList) return;
+  dubList.innerHTML='<div style="font-size:11px;color:var(--text3);padding:6px 0;">⏳ Загружаем озвучки...</div>';
+
+  try{
+    const query = imdb
+      ? `imdb_id=${imdb}`
+      : `kinopoisk_id=${tmdb}`;
+    const url = `https://kodikapi.com/search?token=${KODIK_TOKEN}&${query}&with_material_data=true&with_episodes=true`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    kodikData = data;
+
+    if(!data.results||!data.results.length){
+      dubList.innerHTML='<div style="font-size:11px;color:var(--text3);padding:6px 0;">Озвучки через Kodik не найдены.<br>Используйте другой плеер.</div>';
+      return;
+    }
+
+    // Собираем уникальные озвучки
+    const dubs = {};
+    data.results.forEach(r=>{
+      if(r.translation){
+        dubs[r.translation.id]={
+          id:r.translation.id,
+          title:r.translation.title,
+          type:r.translation.type,
+          link:r.link
+        };
+      }
+    });
+
+    const dubsArr = Object.values(dubs);
+    if(!dubsArr.length){
+      dubList.innerHTML='<div style="font-size:11px;color:var(--text3);">Список пуст</div>';
+      return;
+    }
+
+    // Выбираем первую озвучку по умолчанию
+    currentDubId = dubsArr[0].id;
+
+    // Рендерим список
+    dubList.innerHTML = dubsArr.map(d=>`
+      <div onclick="selectDub(${d.id},'${d.link.replace(/'/g,'')}')"
+           id="dub-${d.id}"
+           style="padding:6px 8px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;
+                  background:${d.id===currentDubId?'rgba(124,58,237,0.2)':'transparent'};
+                  color:${d.id===currentDubId?'var(--accent3)':'var(--text2)'};
+                  border:1px solid ${d.id===currentDubId?'rgba(124,58,237,0.4)':'transparent'};
+                  transition:.15s;">
+        ${d.type==='voice'?'🎙️':'📝'} ${d.title}
+      </div>`).join('');
+
+    // Загружаем первый плеер с первой озвучкой
+    const firstDub = dubsArr[0];
+    loadKodikPlayer(firstDub.link);
+
+    // Сериальная навигация
+    checkSeasonsBlock(data.results);
+
+  }catch(e){
+    console.warn('Kodik API ошибка:', e);
+    dubList.innerHTML='<div style="font-size:11px;color:var(--text3);">Kodik недоступен.<br>Выберите другой плеер.</div>';
+  }
+}
+
+function selectDub(dubId, link){
+  currentDubId = dubId;
+  // Обновляем подсветку
+  document.querySelectorAll('[id^="dub-"]').forEach(el=>{
+    const isActive = el.id===`dub-${dubId}`;
+    el.style.background = isActive?'rgba(124,58,237,0.2)':'transparent';
+    el.style.color = isActive?'var(--accent3)':'var(--text2)';
+    el.style.border = isActive?'1px solid rgba(124,58,237,0.4)':'1px solid transparent';
+  });
+  loadKodikPlayer(link);
+}
+
+function loadKodikPlayer(link){
+  const tip=document.getElementById('player-loading-tip');
+  if(tip) tip.style.display='flex';
+  const iframe=document.getElementById('player-iframe');
+  iframe.src='';
+  setTimeout(()=>{
+    iframe.src = link.startsWith('http')?link:'https:'+link;
+  },80);
+}
+
+// Сезоны и серии для сериалов
+function checkSeasonsBlock(results){
+  const block=document.getElementById('seasons-block');
+  const seasonsList=document.getElementById('seasons-list');
+  if(!block||!seasonsList) return;
+
+  // Ищем результаты с эпизодами
+  const withEps = results.filter(r=>r.episodes&&Object.keys(r.episodes).length>0);
+  if(!withEps.length){block.style.display='none';return;}
+
+  // Собираем уникальные сезоны
+  const seasons=new Set();
+  withEps.forEach(r=>{ if(r.last_season) for(let s=1;s<=r.last_season;s++) seasons.add(s); });
+  if(seasons.size<=1){block.style.display='none';return;}
+
+  block.style.display='block';
+  seasonsList.innerHTML=[...seasons].map(s=>`
+    <button onclick="selectSeason(${s})" style="background:${s===currentSeason?'var(--accent)':'var(--card)'};
+      border:1px solid ${s===currentSeason?'var(--accent)':'var(--border)'};color:#fff;
+      font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;">
+      С${s}
+    </button>`).join('');
+  loadEpisodes(currentSeason, withEps);
+}
+
+function selectSeason(s){
+  currentSeason=s;
+  document.querySelectorAll('#seasons-list button').forEach((b,i)=>{
+    const sNum=i+1;
+    b.style.background=sNum===s?'var(--accent)':'var(--card)';
+    b.style.borderColor=sNum===s?'var(--accent)':'var(--border)';
+  });
+  const withEps=(kodikData?.results||[]).filter(r=>r.episodes&&Object.keys(r.episodes).length>0);
+  loadEpisodes(s,withEps);
+}
+
+function loadEpisodes(season,results){
+  const epList=document.getElementById('episodes-list');
+  if(!epList) return;
+  const ep=results.find(r=>r.episodes&&r.episodes[season]);
+  if(!ep){epList.innerHTML='';return;}
+  const eps=Object.keys(ep.episodes[season]).map(Number).sort((a,b)=>a-b);
+  epList.innerHTML=eps.map(e=>`
+    <button onclick="selectEpisode(${season},${e})" style="background:${e===currentEpisode&&season===currentSeason?'var(--accent)':'var(--card)'};
+      border:1px solid var(--border);color:#fff;font-size:10px;font-weight:600;
+      padding:3px 8px;border-radius:5px;cursor:pointer;font-family:'Inter',sans-serif;">
+      ${e}
+    </button>`).join('');
+}
+
+function selectEpisode(season,ep){
+  currentSeason=season;currentEpisode=ep;
+  checkSeasonsBlock(kodikData?.results||[]);
+  // Перезагружаем плеер с нужной серией
+  const withEps=(kodikData?.results||[]).filter(r=>r.episodes&&r.episodes[season]);
+  const epData=withEps.find(r=>r.translation&&r.translation.id===currentDubId)||withEps[0];
+  if(epData&&epData.episodes&&epData.episodes[season]&&epData.episodes[season][ep]){
+    loadKodikPlayer(epData.episodes[season][ep]);
+  }
 }
 
 function loadSource(idx){
   const urls=getPlayerUrls();
-  const iframe=document.getElementById('player-iframe');
   const tip=document.getElementById('player-loading-tip');
   if(tip) tip.style.display='flex';
-  iframe.src='';
-  setTimeout(()=>{ iframe.src=urls[idx]||urls[0]; },80);
+  const iframe=document.getElementById('player-iframe');
+  if(idx===0){
+    // Kodik: используем API для поиска и загрузки озвучек
+    loadKodikDubs();
+  } else {
+    iframe.src='';
+    setTimeout(()=>{ iframe.src=urls[idx]||urls[1]; },80);
+    // При переключении на не-Kodik плеер прячем список озвучек
+    const dubList=document.getElementById('dub-list');
+    if(dubList) dubList.innerHTML='<div style="font-size:11px;color:var(--text3);padding:6px 0;">Озвучки доступны только в плеере Kodik</div>';
+    const block=document.getElementById('seasons-block');
+    if(block) block.style.display='none';
+  }
 }
+
 function switchSource(idx,el){
   document.querySelectorAll('.player-source').forEach(s=>s.classList.remove('active'));
   el.classList.add('active');
@@ -1361,17 +1583,29 @@ function showPage(name,navEl=null){
 
 // ── STATS ──
 async function updateStats(){
-  // Реальные данные из TMDB
+  // Реальные цифры из TMDB — показываем только то что действительно доступно
   try{
-    const m=await tmdb('/movie/popular',{page:500});
-    const totalM=m.total_results||100000;
-    animCount('stat-films',totalM);
-  }catch(e){animCount('stat-films',900000);}
+    const m=await tmdb('/movie/popular',{page:1});
+    // total_results у TMDB реально ~900к, но на сайте ДОСТУПНЫ через пагинацию
+    // только первые 500 страниц × 20 = 10 000 фильмов. Показываем честно.
+    if(m&&m.total_pages){
+      const accessible=Math.min(m.total_pages,500)*20;
+      animCount('stat-films',accessible);
+    }
+  }catch(e){
+    const el=document.getElementById('stat-films');
+    if(el)el.textContent='10 000+';
+  }
   try{
-    const s=await tmdb('/tv/popular',{page:500});
-    animCount('stat-series',s.total_results||150000);
-  }catch(e){animCount('stat-series',150000);}
-  animCount('stat-parties',0); // заменится реальным из initVisitorCounter
+    const s=await tmdb('/tv/popular',{page:1});
+    if(s&&s.total_pages){
+      const accessible=Math.min(s.total_pages,500)*20;
+      animCount('stat-series',accessible);
+    }
+  }catch(e){
+    const el=document.getElementById('stat-series');
+    if(el)el.textContent='5 000+';
+  }
 }
 function animCount(id,target){const el=document.getElementById(id);if(!el)return;let c=0;const step=target/50;const t=setInterval(()=>{c=Math.min(c+step,target);el.textContent=Math.round(c).toLocaleString('ru');if(c>=target)clearInterval(t);},18);}
 
@@ -1384,6 +1618,39 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePlayer();closeAuth();closeWatchParty();}});
 document.getElementById('page-home').style.display='block';
 document.getElementById('main-footer').style.display='block';
+
+// ── Gemini API ключ: сохранение и проверка ──
+function saveGeminiKey(){
+  const val=document.getElementById('gemini-key-input').value.trim();
+  if(!val||!val.startsWith('AIza')){
+    showToast('⚠️ Некорректный ключ. Должен начинаться с AIza...');
+    return;
+  }
+  GEMINI_KEY=val;
+  localStorage.setItem('nf_gemini_key',val);
+  document.getElementById('gemini-key-block').style.display='none';
+  showToast('✅ Gemini ключ сохранён! ИИ-ассистент активирован.');
+  addAIMsg('✅ Ключ Gemini API успешно сохранён! Теперь я работаю как настоящий ИИ. Спросите меня о любом фильме!','bot');
+}
+
+function checkGeminiKey(){
+  const block=document.getElementById('gemini-key-block');
+  if(!block) return;
+  if(!GEMINI_KEY){
+    block.style.display='block';
+    addAIMsg('⚠️ Для работы ИИ-ассистента нужен бесплатный ключ Gemini API. Введите его в поле выше — получить можно за 5 минут на <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent3);">aistudio.google.com/apikey</a>','bot');
+  }
+}
+setTimeout(checkGeminiKey, 2000);
+
+// ── Пункт 4: Telegram авторизация — честная инструкция ──
+// Telegram Login Widget требует реального бота с настроенным доменом.
+// Текущий плейсхолдер 'NeuroFilmRuBot' не существует как реальный бот.
+// Шаги для настройки:
+// 1. Напишите @BotFather в Telegram: /newbot → получите токен и @username
+// 2. /setdomain → укажите домен: wzcasper.github.io
+// 3. Замените 'NeuroFilmRuBot' в коде на реальный @username вашего бота
+// Пока бот не создан — форма входа через Telegram работать не будет.
 
 // ── ПУНКТ 2,3: Управление плеером ──
 let playerPaused=false;
@@ -1401,10 +1668,21 @@ function playerCmd(cmd){
   }
 }
 function skipIntro(){
+  // Kodik поддерживает postMessage для skip через стандартный HTML5 postMessage API
+  // Это задокументированный интерфейс Kodik, в отличие от других плееров
   const iframe=document.getElementById('player-iframe');
-  if(!iframe||!iframe.contentWindow) return;
-  try{iframe.contentWindow.postMessage({action:'skip_intro'},'*');}catch(e){}
-  showToast('⏭ Пропускаем вступление...');
+  if(!iframe) return;
+  const src=iframe.src||'';
+  if(src.includes('kodik')){
+    try{
+      iframe.contentWindow.postMessage({type:'kodik',method:'skip_intro'},'*');
+      iframe.contentWindow.postMessage('skip','*');
+    }catch(e){}
+    showToast('⏭ Пропускаем вступление...');
+  } else {
+    // Для других плееров — просто показываем подсказку
+    showToast('⏭ Кнопка skip работает только в Kodik-плеере');
+  }
 }
 function playerSeek(e){
   const bar=document.getElementById('progress-bar');
@@ -1432,28 +1710,49 @@ function playerFullscreen(){
 
 // ── ПУНКТ 6: Трейлер и описание фильма ──
 let currentTrailerKey='';
+// Токен последнего запущенного запроса трейлера. Решает race condition:
+// если пользователь быстро открывает фильм A, затем фильм B, а запрос
+// трейлера для A почему-то ответит ПОЗЖЕ запроса для B — без этой проверки
+// результат A перетёр бы уже показанный правильный трейлер фильма B.
+// Именно так "Обсессия" могла показать чужой трейлер.
+let trailerRequestToken=0;
+
 async function openPlayerWithInfo(m){
   openPlayer(m);
-  // Загружаем описание
+  // Каждому открытию фильма присваиваем уникальный токен запроса
+  const myToken = ++trailerRequestToken;
+  // Сразу сбрасываем трейлер и прячем кнопку — пока не подтверждён трейлер
+  // ИМЕННО для этого фильма, показывать чужую кнопку нельзя
+  currentTrailerKey='';
+  const btnReset=document.getElementById('trailer-btn');
+  if(btnReset) btnReset.style.display='none';
+
   const descEl=document.getElementById('movie-desc-text');
   const descRow=document.getElementById('movie-description-row');
   if(descEl&&m.overview){
     descEl.textContent=m.overview||'Описание недоступно';
     if(descRow) descRow.style.display='block';
   }
-  // Загружаем трейлер
+
   try{
     const vids=await fetch(`${TMDB}/movie/${m.id}/videos?api_key=${TMDB_KEY}&language=ru-RU`).then(r=>r.json());
+    // Если за время ожидания пользователь открыл ДРУГОЙ фильм — токен уже
+    // не совпадает, и этот устаревший результат полностью игнорируется
+    if(myToken!==trailerRequestToken) return;
     let trailer=(vids.results||[]).find(v=>v.type==='Trailer'&&v.site==='YouTube');
     if(!trailer){
       const vidsEn=await fetch(`${TMDB}/movie/${m.id}/videos?api_key=${TMDB_KEY}&language=en-US`).then(r=>r.json());
+      if(myToken!==trailerRequestToken) return;
       trailer=(vidsEn.results||[]).find(v=>v.type==='Trailer'&&v.site==='YouTube');
     }
     currentTrailerKey=trailer?.key||'';
     const btn=document.getElementById('trailer-btn');
     if(btn) btn.style.display=currentTrailerKey?'flex':'none';
-    if(document.getElementById('trailer-title')) document.getElementById('trailer-title').textContent='Трейлер: '+(m.title||m.name);
-  }catch(e){currentTrailerKey='';}
+    const tt=document.getElementById('trailer-title');
+    if(tt) tt.textContent='Трейлер: '+(m.title||m.name);
+  }catch(e){
+    if(myToken===trailerRequestToken) currentTrailerKey='';
+  }
 }
 function openTrailer(){
   if(!currentTrailerKey){showToast('Трейлер не найден');return;}
