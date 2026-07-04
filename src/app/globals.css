@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/*
+ * Чёрно-жёлтая тема NeuroFilm — Tailwind v4 использует CSS-конфиг:
+ * любая переменная --color-* внутри @theme автоматически становится
+ * доступна как утилита (bg-nf-yellow, text-nf-yellow, border-nf-yellow…).
+ * Отдельный tailwind.config.js в v4 не нужен и не создаётся.
+ */
+@theme {
+  --color-nf-black: #000000;
+  --color-nf-dark: #0a0a0a;
+  --color-nf-surface: #141414;
+  --color-nf-yellow: #facc15;
+  --color-nf-yellow-bright: #fde047;
+  --color-nf-yellow-dim: #a16207;
+
+  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-nf-black);
+  color: #ffffff;
+  font-family: var(--font-sans);
+}
+
+/* Единый акцентный focus-ring по всему сайту вместо стандартного синего */
+:focus-visible {
+  outline: 2px solid var(--color-nf-yellow);
+  outline-offset: 2px;
+}
+
+/* Тонкий скроллбар в фирменных цветах — на десктопе заметно, на трансляции не мешает */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-nf-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-nf-yellow-dim);
+  border-radius: 8px;
+}

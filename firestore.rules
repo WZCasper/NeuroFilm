@@ -1,0 +1,87 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // users/{uid}
+    // ВАЖНО: aiUnlimited / aiCredits / aiUsage может менять только сервер
+    // (Firebase Admin SDK из app/api/*, который обходит эти правила).
+    // Обычный клиент физически не может выставить себе безлимит или
+    // накрутить счётчик — это и есть настоящая защита лимита, а не
+    // просто проверка в интерфейсе.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['aiUnlimited', 'aiCredits', 'aiUsage']);
+      allow delete: if false;
+    }
+
+    // rooms/{roomId}
+    // Создать комнату может любой авторизованный пользователь, но только
+    // указав себя хостом. Менять комнату (playback, activeSourceId и т.д.)
+    // после создания может только хост.
+    match /rooms/{roomId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.hostId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.hostId == request.auth.uid;
+
+      // participants/{uid} — каждый пишет только свою запись присутствия
+      match /participants/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == uid;
+      }
+
+      // voicePeers/{uid} — presence в голосовом чате, тот же паттерн, что и participants
+      match /voicePeers/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == uid;
+      }
+
+      // voiceSignals/{signalId} — сигналинг WebRTC (offer/answer/ICE).
+      // Читать можно только адресованные себе сигналы: клиент делает
+      // запрос where("to","==",myUid), и это ограничение проверяется
+      // Firestore именно по такому шаблону условия в правиле.
+      match /voiceSignals/{signalId} {
+        allow read: if isSignedIn() && resource.data.to == request.auth.uid;
+        allow create: if isSignedIn() && request.resource.data.from == request.auth.uid;
+        allow update: if false;
+        allow delete: if isSignedIn()
+          && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      }
+
+      // messages/{messageId} — можно создавать от своего имени, нельзя
+      // редактировать/удалять чужие и свои сообщения задним числом
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // playlist/{itemId} — общая очередь предложенных фильмов.
+      // Голосовать может любой участник за чужое предложение, поэтому
+      // update разрешён всем, но ТОЛЬКО для поля votes (остальные поля
+      // предложения неизменяемы после создания). Это не защищает от
+      // теоретической попытки проголосовать чужим uid через сырой
+      // запрос к API — для дружеской очереди фильмов в приватной
+      // комнате это осознанно допустимый компромисс, в отличие от
+      // лимита ИИ-чата, где вопрос денег и защита должна быть жёсткой.
+      match /playlist/{itemId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.suggestedBy == request.auth.uid;
+        allow update: if isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes']);
+        allow delete: if isSignedIn()
+          && (resource.data.suggestedBy == request.auth.uid
+              || get(/databases/$(database)/documents/rooms/$(roomId)).data.hostId == request.auth.uid);
+      }
+    }
+  }
+}

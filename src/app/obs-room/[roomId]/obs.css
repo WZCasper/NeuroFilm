@@ -1,0 +1,63 @@
+/*
+ * Правила для режима OBS Browser Source.
+ *
+ * 1. Никаких текстовых подписей поверх видео — код страницы (page.tsx)
+ *    рендерит только плеер, без title/label/подсказок.
+ * 2. box-sizing: border-box + box-shadow: inset — рамка растёт строго
+ *    внутрь, внешний размер контейнера (тот, что задан в настройках
+ *    Browser Source в OBS) никогда не меняется.
+ * 3. Уведомления сюда физически не подключены — см. комментарий в
+ *    app/layout.tsx и page.tsx этого роута.
+ */
+
+.obs-root {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.obs-root.obs-empty {
+  background: #000000;
+}
+
+.obs-player-frame {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 2px solid var(--color-nf-yellow, #facc15);
+  /* Дублирующий приём для той же цели: inset-тень не влияет на layout вообще */
+  box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.25);
+  overflow: hidden;
+}
+
+/* В плеере на OBS-роуте скрываем вкладки — это управление хоста, не для эфира */
+.obs-player-frame [role="tablist"] {
+  display: none;
+}
+
+.obs-player-frame > div {
+  height: 100%;
+}
+
+/* VideoPlayer по умолчанию держит соотношение 16:9 (aspect-video) —
+   в OBS источник уже имеет нужный размер, поэтому растягиваем на всю
+   высоту контейнера вместо фиксированного аспекта. */
+.obs-player-frame .aspect-video {
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+.obs-player-frame iframe,
+.obs-player-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.obs-root ::-webkit-scrollbar {
+  display: none;
+}
