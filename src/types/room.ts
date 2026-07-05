@@ -24,6 +24,15 @@ export interface RoomDoc {
   activeSourceId: string | null;
   playback: RoomPlaybackState;
   createdAt: number;
+  /**
+   * Настраивается хостом в самой комнате (см. ExternalChatSettings).
+   * null/отсутствие поля — вкладка соответствующего чата просто не
+   * показывается в сайдбаре.
+   */
+  externalChat?: {
+    twitchChannel: string | null;
+    youtubeVideoId: string | null;
+  };
 }
 
 export interface RoomParticipant {

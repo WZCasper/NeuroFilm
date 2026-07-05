@@ -22,6 +22,9 @@ Firebase (Firestore + Auth) · Vercel (хостинг + serverless API).
 - Совместная очередь фильмов: поиск по TMDB прямо в комнате, голосование,
   запуск выбранного фильма хостом (заменяет текущий movie/activeSourceId/
   playback комнаты — плеер у всех переключается сам).
+- Переключаемые панели чата: свой внутренний чат, встроенный чат Twitch
+  и чат YouTube Live — хост указывает канал/ID трансляции прямо в
+  настройках комнаты, вкладки появляются только когда что-то настроено.
 - Роут `/obs-room/[roomId]` для OBS Browser Source: без подписей, без
   чата, без единой возможности показать системное уведомление/PWA-баннер,
   рамки растут только внутрь (`border-box` + `inset`-тень).
@@ -41,11 +44,20 @@ Firebase (Firestore + Auth) · Vercel (хостинг + serverless API).
 - Точные ссылки/токены балансеров (Kodik, VideoCDN, Bazon, HDVB) — у
   каждого свой закрытый формат, известный только тебе. См. комментарий
   в `src/lib/player-sources.ts`.
-- Встраиваемые чаты Twitch/YouTube (нужен канал/видео-ID) и перенос
-  каталога/избранного/push из текущей версии сайта — упираются в
-  информацию, которой пока нет в этом чате.
+- Перенос каталога/избранного/push из текущей версии сайта — упирается
+  в код текущего сайта или отдельное решение пересобрать с нуля.
 - Реальный платёжный шлюз (для РФ-аудитории Stripe не подходит — нужен
   YooKassa/CloudPayments/Telegram Payments).
+
+## Twitch/YouTube чат: что нужно знать
+
+- И Twitch, и YouTube требуют, чтобы параметр `parent`/`embed_domain`
+  точно совпадал с доменом, на котором открыт сайт — он вычисляется
+  динамически на клиенте, поэтому работает одинаково на проде, Vercel
+  preview-доменах и localhost без ручной настройки.
+- YouTube live-чат встраивается только для видео с активной (или
+  недавно завершённой, с сохранённым чатом) Live-трансляцией — для
+  обычного видео чат не появится. Twitch-чат канала доступен и в офлайне.
 - Каталог, hero-баннер, избранное, история, push-уведомления — это уже
   есть в текущей версии сайта на GitHub Pages и не переносилось.
 
@@ -104,10 +116,12 @@ src/
       tmdb/search/           — прокси к поиску TMDB (для очереди)
   components/
     player/VideoPlayer.tsx  — плеер с вкладками (один iframe)
-    room/                   — чат, список зрителей, голосовой чат, очередь
+    room/                   — RoomSidebar (композиция), чат, зрители,
+                              голосовой чат, очередь, Twitch/YouTube embed
     ai/AIChatWidget.tsx     — интерфейс ИИ-ассистента + paywall
     auth/, layout/
-  hooks/                    — useAuth, useRoomSync, useNow, useVoiceChat, usePlaylist
+  hooks/                    — useAuth, useRoomSync, useNow, useVoiceChat,
+                              usePlaylist, useHostname
   lib/                      — firebase (client/admin), player-sources, rooms, webrtc/config
   types/
 firestore.rules             — безопасность: клиент не может сам себе

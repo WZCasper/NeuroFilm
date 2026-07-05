@@ -1,25 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { useParams } from "next/navigation";
-import { Play, Pause, MessageSquare, ListVideo } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRoomSync } from "@/hooks/useRoomSync";
 import { VideoPlayer } from "@/components/player/VideoPlayer";
-import { RoomChat } from "@/components/room/RoomChat";
-import { ParticipantsList } from "@/components/room/ParticipantsList";
-import { VoiceChatPanel } from "@/components/room/VoiceChatPanel";
-import { PlaylistPanel } from "@/components/room/PlaylistPanel";
+import { RoomSidebar } from "@/components/room/RoomSidebar";
 import { TelegramLoginButton } from "@/components/auth/TelegramLoginButton";
 import { PLAYER_SOURCES } from "@/lib/player-sources";
-
-type SidebarTab = "chat" | "queue";
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const { user, loading: authLoading } = useAuth();
   const { room, participants, loading, isHost, updatePlayback, setActiveSource } = useRoomSync(roomId);
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("chat");
 
   if (authLoading || loading) {
     return <CenteredMessage text="Загрузка комнаты…" />;
@@ -80,57 +73,8 @@ export default function RoomPage() {
         )}
       </div>
 
-      <aside className="flex h-[70vh] flex-col border-t border-neutral-800 lg:h-[calc(100vh-57px)] lg:border-l lg:border-t-0">
-        <ParticipantsList participants={participants} hostId={room.hostId} />
-        <VoiceChatPanel roomId={roomId} />
-
-        <div className="flex border-b border-neutral-800">
-          <SidebarTabButton
-            active={sidebarTab === "chat"}
-            onClick={() => setSidebarTab("chat")}
-            icon={<MessageSquare className="h-3.5 w-3.5" />}
-            label="Чат"
-          />
-          <SidebarTabButton
-            active={sidebarTab === "queue"}
-            onClick={() => setSidebarTab("queue")}
-            icon={<ListVideo className="h-3.5 w-3.5" />}
-            label="Очередь"
-          />
-        </div>
-
-        {sidebarTab === "chat" ? (
-          <RoomChat roomId={roomId} />
-        ) : (
-          <PlaylistPanel roomId={roomId} hostId={room.hostId} isHost={isHost} />
-        )}
-      </aside>
+      <RoomSidebar roomId={roomId} room={room} participants={participants} isHost={isHost} />
     </div>
-  );
-}
-
-function SidebarTabButton({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
-        active ? "border-b-2 border-nf-yellow text-nf-yellow" : "border-b-2 border-transparent text-neutral-500 hover:text-neutral-300"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }
 
