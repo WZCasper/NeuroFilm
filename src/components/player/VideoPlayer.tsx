@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Play, Loader2, TriangleAlert } from "lucide-react";
-import type { PlayerTabSource, MovieRef } from "@/types/player";
+import type { PlayerTabSource, MovieRef, PlayerDub } from "@/types/player";
 
 type TabId = "trailer" | string;
 
@@ -48,6 +48,8 @@ export function VideoPlayer({
   const isBalancerTab = activeTab != null && !isTrailerTab;
 
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [dubs, setDubs] = useState<PlayerDub[] | null>(null);
+  const [activeDubId, setActiveDubId] = useState<PlayerDub["id"] | null>(null);
   const [isResolving, setIsResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -77,16 +79,22 @@ export function VideoPlayer({
     setIsResolving(true);
     setResolveError(null);
     setResolvedUrl(null);
+    setDubs(null);
+    setActiveDubId(null);
 
     source
       .resolveUrl(movie)
-      .then((url) => {
+      .then((result) => {
         if (requestIdRef.current !== currentRequestId) return; // ответ устарел — игнорируем
-        if (!url) {
+        if (!result) {
           setResolveError(`Источник «${source.label}» недоступен для этого фильма.`);
           return;
         }
-        setResolvedUrl(url);
+        setResolvedUrl(result.url);
+        if (result.dubs && result.dubs.length > 1) {
+          setDubs(result.dubs);
+          setActiveDubId(result.dubs[0].id);
+        }
       })
       .catch((err: unknown) => {
         if (requestIdRef.current !== currentRequestId) return;
@@ -117,6 +125,11 @@ export function VideoPlayer({
     } else {
       setInternalTab(tabId);
     }
+  }
+
+  function handleDubSelect(dub: PlayerDub) {
+    setActiveDubId(dub.id);
+    setResolvedUrl(dub.url);
   }
 
   return (
@@ -186,6 +199,25 @@ export function VideoPlayer({
           />
         )}
       </div>
+
+      {isBalancerTab && dubs && (
+        <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Озвучка">
+          {dubs.map((dub) => (
+            <button
+              key={dub.id}
+              type="button"
+              onClick={() => handleDubSelect(dub)}
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                dub.id === activeDubId
+                  ? "bg-nf-yellow text-black"
+                  : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+              }`}
+            >
+              {dub.title}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

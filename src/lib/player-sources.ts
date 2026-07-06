@@ -1,59 +1,75 @@
-import type { PlayerTabSource, MovieRef } from "@/types/player";
+import type { PlayerTabSource, MovieRef, ResolvedSource } from "@/types/player";
 
 /**
  * Источники для вкладок плеера ("Плеер 1"–"Плеер 4").
  *
- * Как это используется: VideoPlayer.tsx строит вкладки из этого массива.
- * При выборе вкладки вызывается resolveUrl(movie), и результат попадает
- * в единственный существующий iframe — остальные вкладки в этот момент
- * ничего не рендерят (см. components/player/VideoPlayer.tsx).
- *
- * Почему resolveUrl ниже — заглушки, а не готовые ссылки на Kodik/
- * VideoCDN/Bazon/HDVB: у каждого из этих CIS-балансеров закрытый формат
- * ссылки и токен, привязанный конкретно к твоему аккаунту. Придумать
- * правдоподобно выглядящий URL несложно, но он не будет работать —
- * а отличить рабочую ссылку от красиво угаданной на глаз нельзя, пока
- * не попробуешь в бою. Это ровно тот случай "имитации", которого ты
- * просил избегать, поэтому здесь — честная точка расширения.
- *
- * Пришли свою текущую рабочую функцию построения ссылки для Kodik
- * (ты уже разбирался с его postMessage API для переключения озвучки
- * и skip-intro) — и я подставлю её сюда без каких-либо угадываний.
+ * Логика построения ссылок портирована 1:1 из текущей рабочей версии
+ * сайта (index.html) — токены те же, что уже используются в проде.
+ * Kodik устроен иначе, чем остальные три: это не шаблон строки, а
+ * реальный вызов его API (см. app/api/kodik/search), который отдаёт
+ * список доступных озвучек — поэтому у него единственного бывает
+ * несколько вариантов (dubs) в ResolvedSource.
  */
+
+async function resolveKodik(movie: MovieRef): Promise<ResolvedSource | null> {
+  const params = new URLSearchParams({ title: movie.title });
+  if (movie.imdbId) {
+    params.set("imdbId", movie.imdbId);
+  } else {
+    params.set("tmdbId", String(movie.tmdbId));
+  }
+
+  const response = await fetch(`/api/kodik/search?${params.toString()}`);
+  if (!response.ok) return null;
+
+  const data = (await response.json()) as { dubs?: { id: number; title: string; url: string }[] };
+  const dubs = data.dubs ?? [];
+  if (!dubs.length) return null;
+
+  return { url: dubs[0].url, dubs };
+}
+
+function resolveVideoCdn(movie: MovieRef): ResolvedSource {
+  const token = process.env.NEXT_PUBLIC_VIDEOCDN_TOKEN ?? "";
+  const idParam = movie.imdbId ? `imdb_id=${movie.imdbId}` : `kinopoisk_id=${movie.tmdbId}`;
+  return { url: `https://videocdn.tv/api?token=${token}&${idParam}&show_page=1` };
+}
+
+function resolveBazon(movie: MovieRef): ResolvedSource {
+  const token = process.env.NEXT_PUBLIC_BAZON_TOKEN ?? "";
+  const idParam = movie.imdbId ? `imdb_id=${movie.imdbId}` : `tmdbid=${movie.tmdbId}`;
+  return { url: `https://bazon.cc/api?token=${token}&${idParam}` };
+}
+
+function resolveHdvb(movie: MovieRef): ResolvedSource {
+  const token = process.env.NEXT_PUBLIC_HDVB_TOKEN ?? "";
+  const id = movie.imdbId || String(movie.tmdbId);
+  return { url: `https://hdvb.ru/embed/movie/${id}?token=${token}` };
+}
+
 export const PLAYER_SOURCES: PlayerTabSource[] = [
   {
     id: "kodik",
     label: "Плеер 1",
-    supportsSync: true, // у Kodik есть документированный postMessage API
-    resolveUrl: notImplemented("kodik"),
+    supportsSync: true, // у Kodik есть документированный postMessage API (skip-intro и т.п.)
+    resolveUrl: resolveKodik,
   },
   {
     id: "videocdn",
     label: "Плеер 2",
     supportsSync: false,
-    resolveUrl: notImplemented("videocdn"),
+    resolveUrl: async (movie) => resolveVideoCdn(movie),
   },
   {
     id: "bazon",
     label: "Плеер 3",
     supportsSync: false,
-    resolveUrl: notImplemented("bazon"),
+    resolveUrl: async (movie) => resolveBazon(movie),
   },
   {
     id: "hdvb",
     label: "Плеер 4",
     supportsSync: false,
-    resolveUrl: notImplemented("hdvb"),
+    resolveUrl: async (movie) => resolveHdvb(movie),
   },
 ];
-
-function notImplemented(balancer: string): (movie: MovieRef) => Promise<string | null> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- сигнатура задана типом PlayerTabSource["resolveUrl"]
-  return async (movie: MovieRef): Promise<string | null> => {
-    console.warn(
-      `[player-sources] Источник "${balancer}" ещё не подключён. ` +
-        `Замени эту функцию на реальный resolveUrl для ${balancer}.`
-    );
-    return null;
-  };
-}
