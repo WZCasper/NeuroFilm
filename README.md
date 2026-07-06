@@ -29,6 +29,13 @@ Firebase (Firestore + Auth) · Vercel (хостинг + serverless API).
 - Переключаемые панели чата: свой внутренний чат, встроенный чат Twitch
   и чат YouTube Live — хост указывает канал/ID трансляции прямо в
   настройках комнаты, вкладки появляются только когда что-то настроено.
+- Страница фильма (`/movie/[id]`) с реальными данными TMDB (постер,
+  бэкдроп, жанры, рейтинг, трейлер), кнопкой «В избранное» и «Смотреть
+  вместе». Избранное и история просмотров — на Firestore, привязаны к
+  Telegram-аккаунту (в прежней версии сайта это жило в localStorage
+  браузера и терялось при смене устройства).
+- Поиск по TMDB на главной странице — временная замена полноценной
+  витрины с hero-баннером и подборками по жанрам (следующий шаг).
 - Роут `/obs-room/[roomId]` для OBS Browser Source: без подписей, без
   чата, без единой возможности показать системное уведомление/PWA-баннер,
   рамки растут только внутрь (`border-box` + `inset`-тень).
@@ -45,8 +52,12 @@ Firebase (Firestore + Auth) · Vercel (хостинг + serverless API).
 
 ## Что НЕ вошло (сознательно, чтобы не выдавать заглушки за готовое)
 
-- Перенос каталога/избранного/push из текущей версии сайта — следующий
-  шаг, теперь на очереди (код старого сайта уже под рукой).
+- Витрина главной страницы старого сайта — hero-баннер с каруселью,
+  фильтры по жанрам, подборки Popular/Top Rated/Upcoming/Now Playing.
+  Сейчас на главной только рабочий поиск; сама страница фильма, избранное
+  и история уже перенесены и работают на реальных данных.
+- Push-уведомления — были в старой версии, на Firestore/Web Push пока
+  не переносились.
 - Реальный платёжный шлюз (для РФ-аудитории Stripe не подходит — нужен
   YooKassa/CloudPayments/Telegram Payments) — ждёт твоего выбора провайдера.
 - Сезоны/серии для сериалов у Kodik (в старом сайте эта логика есть,
@@ -112,22 +123,28 @@ src/
   app/
     layout.tsx              — корневой layout (только AuthProvider)
     (main)/                 — обычные страницы сайта (шапка + провайдеры UI)
-      room/[roomId]/        — комната просмотра
+      page.tsx               — главная: поиск по TMDB
+      movie/[id]/            — страница фильма (реальные данные TMDB)
+      favorites/, history/   — избранное и история (Firestore)
+      assistant/             — ИИ-подбор фильмов
+      room/[roomId]/         — комната просмотра
     obs-room/[roomId]/      — минимальный роут для OBS Browser Source
     api/
       auth/telegram/        — проверка подписи Telegram → custom token
       ai/chat/               — прокси к Gemini + атомарный лимит запросов
-      tmdb/search/           — прокси к поиску TMDB (для очереди)
+      tmdb/search/           — прокси к поиску TMDB (для очереди и поиска)
       kodik/search/          — прокси к kodikapi.com (список озвучек)
   components/
     player/VideoPlayer.tsx  — плеер с вкладками (один iframe)
+    movie/                  — FavoriteButton, HistoryLogger, MoviePosterGrid
     room/                   — RoomSidebar (композиция), чат, зрители,
                               голосовой чат, очередь, Twitch/YouTube embed
     ai/AIChatWidget.tsx     — интерфейс ИИ-ассистента + paywall
     auth/, layout/
   hooks/                    — useAuth, useRoomSync, useNow, useVoiceChat,
-                              usePlaylist, useHostname
-  lib/                      — firebase (client/admin), player-sources, rooms, webrtc/config
+                              usePlaylist, useHostname, useFavorites, useWatchHistory
+  lib/                      — firebase (client/admin), player-sources, rooms,
+                              webrtc/config, tmdb.ts, library.ts
   types/
 firestore.rules             — безопасность: клиент не может сам себе
                                выставить aiUnlimited/aiCredits

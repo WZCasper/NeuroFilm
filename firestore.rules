@@ -21,6 +21,15 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys()
              .hasAny(['aiUnlimited', 'aiCredits', 'aiUsage']);
       allow delete: if false;
+
+      // favorites/{tmdbId}, history/{tmdbId} — личные подколлекции,
+      // читать и писать может только владелец аккаунта
+      match /favorites/{tmdbId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+      match /history/{tmdbId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     // rooms/{roomId}
