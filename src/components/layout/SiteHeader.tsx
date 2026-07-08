@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { TelegramLoginButton } from "@/components/auth/TelegramLoginButton";
+import { NotificationToggle } from "@/components/notifications/NotificationToggle";
 
 const NAV_LINKS = [
   { href: "/favorites", label: "Избранное" },
@@ -34,6 +35,7 @@ export function SiteHeader() {
 
       {user && profile ? (
         <div className="flex items-center gap-3">
+          <NotificationToggle />
           {profile.photoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img

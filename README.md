@@ -38,6 +38,12 @@ Firebase (Firestore + Auth) · Vercel (хостинг + serverless API).
   старого сайта — те же принципы, ссылки ведут на реальные страницы
   фильмов вместо оверлея), фильтр по жанрам, подборки Popular/Top
   Rated/Upcoming/Now Playing, поиск по TMDB.
+- Push-уведомления (Firebase Cloud Messaging): участники комнаты
+  получают уведомление, когда хост начинает просмотр. Разрешение
+  запрашивается только по явному клику — не автоматически при заходе
+  на сайт. Service worker отдаётся Route Handler'ом, а не статическим
+  файлом — иначе он не смог бы прочитать конфиг Firebase из переменных
+  окружения.
 - Роут `/obs-room/[roomId]` для OBS Browser Source: без подписей, без
   чата, без единой возможности показать системное уведомление/PWA-баннер,
   рамки растут только внутрь (`border-box` + `inset`-тень).
@@ -54,13 +60,13 @@ Firebase (Firestore + Auth) · Vercel (хостинг + serverless API).
 
 ## Что НЕ вошло (сознательно, чтобы не выдавать заглушки за готовое)
 
-- Push-уведомления — были в старой версии, на Firestore/Web Push пока
-  не переносились.
 - Реальный платёжный шлюз (для РФ-аудитории Stripe не подходит — нужен
   YooKassa/CloudPayments/Telegram Payments) — ждёт твоего выбора провайдера.
 - Сезоны/серии для сериалов у Kodik (в старом сайте эта логика есть,
   но текущая версия NeuroFilm ориентирована на фильмы — типы данных
   под сериалы пока не заведены).
+- Иконка для уведомлений (`/icon-192.png`) — нужен реальный файл с
+  логотипом NeuroFilm в `public/`, сейчас путь указан, но файла нет.
 
 ## Twitch/YouTube чат: что нужно знать
 
@@ -95,6 +101,9 @@ npm run dev
    значения из JSON пойдут в `FIREBASE_ADMIN_*`.
 6. Опубликуй правила: `npx firebase-tools deploy --only firestore:rules`
    (или вставь содержимое `firestore.rules` вручную в консоли).
+7. Для push-уведомлений: Project settings → Cloud Messaging → Web
+   configuration → Web Push certificates → Generate key pair →
+   значение в `NEXT_PUBLIC_FIREBASE_VAPID_KEY`.
 
 ### 2. Telegram
 

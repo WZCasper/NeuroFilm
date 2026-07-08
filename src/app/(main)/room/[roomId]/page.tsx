@@ -11,8 +11,27 @@ import { PLAYER_SOURCES } from "@/lib/player-sources";
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
-  const { user, loading: authLoading } = useAuth();
+  const { user, getIdToken, loading: authLoading } = useAuth();
   const { room, participants, loading, isHost, updatePlayback, setActiveSource } = useRoomSync(roomId);
+
+  async function handlePlayPause() {
+    if (!room) return;
+    const startingPlayback = !room.playback.isPlaying;
+    await updatePlayback({ isPlaying: startingPlayback });
+
+    // Пуш — только при старте просмотра, не при паузе: пауза не то
+    // событие, ради которого стоит будить кому-то телефон
+    if (startingPlayback) {
+      const idToken = await getIdToken();
+      if (idToken) {
+        fetch("/api/rooms/notify-play", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ roomId }),
+        }).catch((err: unknown) => console.error("Не удалось отправить push-уведомление:", err));
+      }
+    }
+  }
 
   if (authLoading || loading) {
     return <CenteredMessage text="Загрузка комнаты…" />;
@@ -55,7 +74,7 @@ export default function RoomPage() {
           <div className="mt-4 flex items-center gap-3">
             <button
               type="button"
-              onClick={() => updatePlayback({ isPlaying: !room.playback.isPlaying })}
+              onClick={handlePlayPause}
               className="flex items-center gap-2 rounded-xl bg-nf-yellow px-5 py-2.5 font-semibold text-black transition-colors hover:bg-nf-yellow-bright"
             >
               {room.playback.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
