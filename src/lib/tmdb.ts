@@ -75,3 +75,56 @@ export function tmdbPosterUrl(path: string | null, size: "w342" | "w500" = "w500
 export function tmdbBackdropUrl(path: string | null): string {
   return path ? `https://image.tmdb.org/t/p/original${path}` : "";
 }
+
+async function tmdbGet<T>(path: string, params: Record<string, string> = {}, revalidate = 3600): Promise<T | null> {
+  const url = new URL(`${TMDB_BASE}${path}`);
+  url.searchParams.set("language", "ru-RU");
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+
+  const response = await fetch(url, { headers: tmdbHeaders(), next: { revalidate } });
+  if (!response.ok) return null;
+  return response.json() as Promise<T>;
+}
+
+export interface TmdbMovieSummary {
+  id: number;
+  title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string;
+  vote_average: number;
+  genre_ids: number[];
+}
+
+export async function fetchPopularMovies(): Promise<TmdbMovieSummary[]> {
+  const data = await tmdbGet<{ results: TmdbMovieSummary[] }>("/movie/popular");
+  return data?.results ?? [];
+}
+
+export async function fetchTopRatedMovies(): Promise<TmdbMovieSummary[]> {
+  const data = await tmdbGet<{ results: TmdbMovieSummary[] }>("/movie/top_rated");
+  return data?.results ?? [];
+}
+
+export async function fetchUpcomingMovies(): Promise<TmdbMovieSummary[]> {
+  const data = await tmdbGet<{ results: TmdbMovieSummary[] }>("/movie/upcoming");
+  return data?.results ?? [];
+}
+
+export async function fetchNowPlayingMovies(): Promise<TmdbMovieSummary[]> {
+  const data = await tmdbGet<{ results: TmdbMovieSummary[] }>("/movie/now_playing");
+  return data?.results ?? [];
+}
+
+export interface TmdbGenre {
+  id: number;
+  name: string;
+}
+
+export async function fetchGenres(): Promise<TmdbGenre[]> {
+  const data = await tmdbGet<{ genres: TmdbGenre[] }>("/genre/movie/list", {}, 86400);
+  return data?.genres ?? [];
+}
