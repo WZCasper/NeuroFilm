@@ -2,20 +2,25 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Play, Loader2, TriangleAlert } from "lucide-react";
-import type { PlayerTabSource, MovieRef, PlayerDub } from "@/types/player";
+import type { PlayerTabSource, MediaRef, PlayerDub } from "@/types/player";
 
 type TabId = "trailer" | string;
 
 interface VideoPlayerProps {
-  movie: MovieRef;
+  media: MediaRef;
   posterUrl: string;
   trailerYoutubeKey: string | null;
   sources: PlayerTabSource[];
-  /** Если передано — компонент управляется извне (например, комнатой просмотра). */
+  /** Если передано — компонент управляется извне (например, комнатой просмотра) */
   controlledTabId?: TabId | null;
   onTabChange?: (tabId: TabId) => void;
-  /** Вкладки видны, но не кликабельны (зрители-не-хосты в комнате). */
+  /** Вкладки видны, но не кликабельны (зрители-не-хосты в комнате) */
   readOnly?: boolean;
+}
+
+function sortedNumberKeys(obj: Record<number, unknown> | undefined): number[] {
+  if (!obj) return [];
+  return Object.keys(obj).map(Number).sort((a, b) => a - b);
 }
 
 /**
@@ -23,17 +28,15 @@ interface VideoPlayerProps {
  * iframe. По умолчанию — только постер и кнопка Play, без единого
  * iframe в DOM. При выборе вкладки подставляется готовая ссылка в
  * единственный <iframe>; при смене вкладки старый iframe размонтируется
- * (key={displayUrl}), новый создаётся только когда ссылка готова —
- * второй iframe никогда не существует параллельно с первым.
+ * (key={displayUrl}), новый создаётся только когда ссылка готова.
  *
- * Ссылка на трейлер — чистая производная от пропсов (activeTab,
- * trailerYoutubeKey), без состояния и без эффекта: она не требует
- * похода в сеть, поэтому её незачем хранить в useState. Состояние и
- * useEffect ниже используются ТОЛЬКО для реально асинхронного резолва
- * ссылок балансеров (Плеер 1-4) через source.resolveUrl(movie).
+ * Для сериалов (media.mediaType === "tv") Kodik отдаёт ВСЮ карту
+ * сезон->серия->ссылка одним запросом (см. resolveKodik в
+ * player-sources.ts) — переключение серии внутри уже полученных данных
+ * происходит на клиенте, без повторного похода в API.
  */
 export function VideoPlayer({
-  movie,
+  media,
   posterUrl,
   trailerYoutubeKey,
   sources,
@@ -50,6 +53,8 @@ export function VideoPlayer({
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [dubs, setDubs] = useState<PlayerDub[] | null>(null);
   const [activeDubId, setActiveDubId] = useState<PlayerDub["id"] | null>(null);
+  const [activeSeason, setActiveSeason] = useState<number | null>(null);
+  const [activeEpisode, setActiveEpisode] = useState<number | null>(null);
   const [isResolving, setIsResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -59,9 +64,7 @@ export function VideoPlayer({
     [sources]
   );
 
-  // Асинхронный резолв — только для вкладок-балансеров. Для трейлера и
-  // "пустой" вкладки эффект ничего не резолвит и ничего не сбрасывает
-  // (итоговые displayUrl/displayError ниже сами учитывают activeTab).
+  // Асинхронный резолв — только для вкладок-балансеров
   useEffect(() => {
     if (!isBalancerTab) return;
 
@@ -69,31 +72,46 @@ export function VideoPlayer({
     if (!source) return;
 
     const currentRequestId = ++requestIdRef.current;
-    // Это стандартный паттерн "старт асинхронной загрузки в эффекте":
-    // синхронно фиксируем "идёт загрузка" и сразу запускаем resolveUrl()
-    // ниже; requestIdRef защищает от гонки, если пользователь быстро
-    // переключит вкладку ещё раз. Экспериментальное правило react-hooks/
-    // set-state-in-effect в eslint-plugin-react-hooks v6 помечает любой
-    // синхронный setState в эффекте, включая этот легитимный кейс.
+    // Стандартный паттерн "старт асинхронной загрузки в эффекте" —
+    // requestIdRef защищает от гонки при быстром переключении вкладок.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsResolving(true);
     setResolveError(null);
     setResolvedUrl(null);
     setDubs(null);
     setActiveDubId(null);
+    setActiveSeason(null);
+    setActiveEpisode(null);
 
     source
-      .resolveUrl(movie)
+      .resolveUrl(media)
       .then((result) => {
         if (requestIdRef.current !== currentRequestId) return; // ответ устарел — игнорируем
         if (!result) {
-          setResolveError(`Источник «${source.label}» недоступен для этого фильма.`);
+          setResolveError(`Источник «${source.label}» недоступен для этого тайтла.`);
           return;
         }
+
         setResolvedUrl(result.url);
-        if (result.dubs && result.dubs.length > 1) {
-          setDubs(result.dubs);
-          setActiveDubId(result.dubs[0].id);
+        const firstDub = result.dubs?.[0];
+        if (!firstDub) return;
+
+        setDubs(result.dubs ?? null);
+        setActiveDubId(firstDub.id);
+
+        const seasons = sortedNumberKeys(firstDub.episodes);
+        if (seasons.length > 0) {
+          const requestedSeason = media.mediaType === "tv" ? media.season : undefined;
+          const requestedEpisode = media.mediaType === "tv" ? media.episode : undefined;
+          const season =
+            requestedSeason != null && firstDub.episodes?.[requestedSeason] ? requestedSeason : seasons[0];
+          const episodes = sortedNumberKeys(firstDub.episodes?.[season]);
+          const episode =
+            requestedEpisode != null && firstDub.episodes?.[season]?.[requestedEpisode]
+              ? requestedEpisode
+              : episodes[0];
+          setActiveSeason(season);
+          setActiveEpisode(episode ?? null);
         }
       })
       .catch((err: unknown) => {
@@ -104,7 +122,7 @@ export function VideoPlayer({
       .finally(() => {
         if (requestIdRef.current === currentRequestId) setIsResolving(false);
       });
-  }, [isBalancerTab, activeTab, movie, sources]);
+  }, [isBalancerTab, activeTab, media, sources]);
 
   const trailerUrl = trailerYoutubeKey ? `https://www.youtube.com/embed/${trailerYoutubeKey}?autoplay=1` : null;
 
@@ -112,11 +130,15 @@ export function VideoPlayer({
   const displayError = isTrailerTab
     ? trailerUrl
       ? null
-      : "Трейлер недоступен для этого фильма."
+      : "Трейлер недоступен для этого тайтла."
     : isBalancerTab
       ? resolveError
       : null;
   const displayResolving = isBalancerTab && isResolving;
+
+  const activeDub = dubs?.find((d) => d.id === activeDubId) ?? null;
+  const availableSeasons = sortedNumberKeys(activeDub?.episodes);
+  const availableEpisodes = activeSeason != null ? sortedNumberKeys(activeDub?.episodes?.[activeSeason]) : [];
 
   function handleTabClick(tabId: TabId) {
     if (readOnly) return;
@@ -129,7 +151,36 @@ export function VideoPlayer({
 
   function handleDubSelect(dub: PlayerDub) {
     setActiveDubId(dub.id);
-    setResolvedUrl(dub.url);
+    const seasons = sortedNumberKeys(dub.episodes);
+    if (seasons.length === 0) {
+      setActiveSeason(null);
+      setActiveEpisode(null);
+      setResolvedUrl(dub.url);
+      return;
+    }
+    const season = activeSeason != null && dub.episodes?.[activeSeason] ? activeSeason : seasons[0];
+    const episodes = sortedNumberKeys(dub.episodes?.[season]);
+    const episode = activeEpisode != null && dub.episodes?.[season]?.[activeEpisode] ? activeEpisode : episodes[0];
+    setActiveSeason(season);
+    setActiveEpisode(episode ?? null);
+    setResolvedUrl((episode != null ? dub.episodes?.[season]?.[episode] : undefined) ?? dub.url);
+  }
+
+  function handleSeasonSelect(season: number) {
+    if (!activeDub?.episodes?.[season]) return;
+    const episodes = sortedNumberKeys(activeDub.episodes[season]);
+    const episode = episodes[0];
+    setActiveSeason(season);
+    setActiveEpisode(episode ?? null);
+    if (episode != null) setResolvedUrl(activeDub.episodes[season][episode]);
+  }
+
+  function handleEpisodeSelect(episode: number) {
+    if (activeSeason == null) return;
+    const url = activeDub?.episodes?.[activeSeason]?.[episode];
+    if (!url) return;
+    setActiveEpisode(episode);
+    setResolvedUrl(url);
   }
 
   return (
@@ -163,11 +214,7 @@ export function VideoPlayer({
             aria-label="Смотреть трейлер"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={posterUrl}
-              alt={movie.title}
-              className="absolute inset-0 h-full w-full object-cover opacity-60"
-            />
+            <img src={posterUrl} alt={media.title} className="absolute inset-0 h-full w-full object-cover opacity-60" />
             <span className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-nf-yellow transition-transform group-hover:scale-110">
               <Play className="h-7 w-7 text-black" fill="black" />
             </span>
@@ -191,7 +238,7 @@ export function VideoPlayer({
           <iframe
             key={displayUrl}
             src={displayUrl}
-            title={`${movie.title} — ${activeTab}`}
+            title={`${media.title} — ${activeTab}`}
             className="absolute inset-0 h-full w-full"
             allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
             allowFullScreen
@@ -200,7 +247,7 @@ export function VideoPlayer({
         )}
       </div>
 
-      {isBalancerTab && dubs && (
+      {isBalancerTab && dubs && dubs.length > 1 && (
         <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Озвучка">
           {dubs.map((dub) => (
             <button
@@ -216,6 +263,45 @@ export function VideoPlayer({
               {dub.title}
             </button>
           ))}
+        </div>
+      )}
+
+      {isBalancerTab && availableSeasons.length > 0 && (
+        <div className="mt-2 space-y-1.5" role="group" aria-label="Сезоны и серии">
+          {availableSeasons.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              {availableSeasons.map((season) => (
+                <button
+                  key={season}
+                  type="button"
+                  onClick={() => handleSeasonSelect(season)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                    season === activeSeason
+                      ? "bg-nf-yellow text-black"
+                      : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+                  }`}
+                >
+                  Сезон {season}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {availableEpisodes.map((episode) => (
+              <button
+                key={episode}
+                type="button"
+                onClick={() => handleEpisodeSelect(episode)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                  episode === activeEpisode
+                    ? "bg-nf-yellow text-black"
+                    : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+                }`}
+              >
+                {episode}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

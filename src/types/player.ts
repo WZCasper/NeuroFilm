@@ -1,15 +1,13 @@
-export interface MovieRef {
-  tmdbId: number;
-  title: string;
-  year?: number;
-  kinopoiskId?: string;
-  imdbId?: string;
-}
+import type { MediaRef } from "@/types/media";
+
+export type { MediaRef } from "@/types/media";
 
 export interface PlayerDub {
   id: number | string;
   title: string;
   url: string;
+  /** Только для сериалов: сезон -> эпизод -> ссылка (у Kodik это реальные данные из его API). */
+  episodes?: Record<number, Record<number, string>>;
 }
 
 export interface ResolvedSource {
@@ -25,11 +23,11 @@ export interface PlayerTabSource {
   label: string;
   /**
    * Асинхронно возвращает готовый источник для iframe, либо null, если
-   * для этого фильма источник недоступен. Асинхронность нужна не только
+   * для этого тайтла источник недоступен. Асинхронность нужна не только
    * "на будущее" — у Kodik это реально так: сначала запрос к его API
    * (см. app/api/kodik/search), и только потом готовая embed-ссылка.
    */
-  resolveUrl: (movie: MovieRef) => Promise<ResolvedSource | null>;
+  resolveUrl: (media: MediaRef) => Promise<ResolvedSource | null>;
   /**
    * Умеет ли конкретно этот источник принимать команды play/pause/seek
    * программно (обычно через postMessage в iframe). Если false — комната

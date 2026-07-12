@@ -61,7 +61,7 @@ export default function RoomPage() {
         </div>
 
         <VideoPlayer
-          movie={room.movie}
+          media={{ mediaType: "movie", ...room.movie }}
           posterUrl={room.movie.posterUrl}
           trailerYoutubeKey={null}
           sources={PLAYER_SOURCES}

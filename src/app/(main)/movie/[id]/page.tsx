@@ -32,8 +32,13 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
   const backdropUrl = tmdbBackdropUrl(details.backdrop_path);
   const year = details.release_date ? Number(details.release_date.slice(0, 4)) : undefined;
 
-  const libraryRef = { tmdbId: details.id, title: details.title, posterUrl };
-  const playerMovie = {
+  // Для избранного/истории — с mediaType (у фильма и сериала могут
+  // совпадать числовые tmdbId, это разные сущности, см. types/media.ts)
+  const libraryRef = { mediaType: "movie" as const, tmdbId: details.id, title: details.title, posterUrl };
+  // Для комнаты — пока без mediaType, комнаты остаются про фильмы до Этапа 2
+  const roomRef = { tmdbId: details.id, title: details.title, posterUrl };
+  const playerMedia = {
+    mediaType: "movie" as const,
     tmdbId: details.id,
     title: details.title,
     year,
@@ -51,7 +56,7 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
       )}
 
       <div className="mx-auto max-w-6xl px-4 py-6 lg:px-8">
-        <HistoryLogger movie={libraryRef} />
+        <HistoryLogger media={libraryRef} />
 
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -69,13 +74,13 @@ export default async function MoviePage({ params }: { params: Promise<{ id: stri
           </div>
 
           <div className="flex items-center gap-2">
-            <FavoriteButton movie={libraryRef} />
-            <CreateRoomButton movie={libraryRef} />
+            <FavoriteButton media={libraryRef} />
+            <CreateRoomButton movie={roomRef} />
           </div>
         </div>
 
         <VideoPlayer
-          movie={playerMovie}
+          media={playerMedia}
           posterUrl={posterUrl}
           trailerYoutubeKey={trailerKey}
           sources={PLAYER_SOURCES}

@@ -70,7 +70,7 @@ export default function ObsRoomPage() {
     <div className="obs-root">
       <div className="obs-player-frame">
         <VideoPlayer
-          movie={room.movie}
+          media={{ mediaType: "movie", ...room.movie }}
           posterUrl={room.movie.posterUrl}
           trailerYoutubeKey={null}
           sources={PLAYER_SOURCES}

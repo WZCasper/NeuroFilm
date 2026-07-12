@@ -44,6 +44,13 @@ Firebase (Firestore + Auth) · Vercel (хостинг + serverless API).
   на сайт. Service worker отдаётся Route Handler'ом, а не статическим
   файлом — иначе он не смог бы прочитать конфиг Firebase из переменных
   окружения.
+- Сериалы (`/tv/[id]`): полноценные данные TMDB, выбор сезона/серии,
+  реальные серии от Kodik (сезон/серия из его API, без выдумывания),
+  избранное и история с учётом типа контента (`MediaRef` с mediaType —
+  у фильма и сериала может совпадать числовой tmdbId, это разные
+  сущности, поэтому Firestore-документы используют составной ключ
+  `movie-550`/`tv-550`). Поиск на главной теперь находит и фильмы, и
+  сериалы (`/api/tmdb/search-multi`).
 - Роут `/obs-room/[roomId]` для OBS Browser Source: без подписей, без
   чата, без единой возможности показать системное уведомление/PWA-баннер,
   рамки растут только внутрь (`border-box` + `inset`-тень).
@@ -62,11 +69,15 @@ Firebase (Firestore + Auth) · Vercel (хостинг + serverless API).
 
 - Реальный платёжный шлюз (для РФ-аудитории Stripe не подходит — нужен
   YooKassa/CloudPayments/Telegram Payments) — ждёт твоего выбора провайдера.
-- Сезоны/серии для сериалов у Kodik (в старом сайте эта логика есть,
-  но текущая версия NeuroFilm ориентирована на фильмы — типы данных
-  под сериалы пока не заведены).
 - Иконка для уведомлений (`/icon-192.png`) — нужен реальный файл с
   логотипом NeuroFilm в `public/`, сейчас путь указан, но файла нет.
+- Сериалы в комнатах совместного просмотра и в очереди (Этап 2) — оба
+  сейчас всё ещё про фильмы: `RoomMovieRef`/`PlaylistItemDoc` не знают
+  про mediaType/сезон/серию. Сама возможность смотреть сериалы уже
+  полностью работает на `/tv/[id]`, вопрос только в комнатах.
+- Для VideoCDN/Bazon/HDVB сезоны/серии не поддержаны — в старом сайте
+  этой логики не было вообще ни для одного из них (проверено по коду),
+  выдумывать её не стал. Работает только у Kodik.
 
 ## Twitch/YouTube чат: что нужно знать
 
@@ -130,9 +141,10 @@ src/
   app/
     layout.tsx              — корневой layout (только AuthProvider)
     (main)/                 — обычные страницы сайта (шапка + провайдеры UI)
-      page.tsx               — главная: поиск по TMDB
+      page.tsx               — главная: поиск (мульти: фильмы+сериалы)
       movie/[id]/            — страница фильма (реальные данные TMDB)
-      favorites/, history/   — избранное и история (Firestore)
+      tv/[id]/                — страница сериала (сезоны/серии, TMDB + Kodik)
+      favorites/, history/   — избранное и история (Firestore, mediaType-aware)
       assistant/             — ИИ-подбор фильмов
       room/[roomId]/         — комната просмотра
     obs-room/[roomId]/      — минимальный роут для OBS Browser Source
@@ -142,9 +154,10 @@ src/
       tmdb/search/           — прокси к поиску TMDB (для очереди и поиска)
       kodik/search/          — прокси к kodikapi.com (список озвучек)
   components/
-    player/VideoPlayer.tsx  — плеер с вкладками (один iframe)
+    player/VideoPlayer.tsx  — плеер с вкладками (один iframe), сезоны/серии
     home/                   — HeroBanner, GenreFilter, MovieRow, HomeContent
     movie/                  — FavoriteButton, HistoryLogger, MoviePosterGrid
+    tv/                     — TVPageClient (сезоны/серии + плеер)
     room/                   — RoomSidebar (композиция), чат, зрители,
                               голосовой чат, очередь, Twitch/YouTube embed
     ai/AIChatWidget.tsx     — интерфейс ИИ-ассистента + paywall
@@ -153,7 +166,7 @@ src/
                               usePlaylist, useHostname, useFavorites, useWatchHistory
   lib/                      — firebase (client/admin), player-sources, rooms,
                               webrtc/config, tmdb.ts, library.ts
-  types/
+  types/                    — media.ts (MediaRef — ядро типов после Этапа 1)
 firestore.rules             — безопасность: клиент не может сам себе
                                выставить aiUnlimited/aiCredits
 ```

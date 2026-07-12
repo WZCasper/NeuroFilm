@@ -68,7 +68,7 @@ export function HeroBanner({ movies }: { movies: HeroMovie[] }) {
             <Play className="h-4 w-4" fill="black" />
             Смотреть
           </Link>
-          <FavoriteButton movie={{ tmdbId: movie.tmdbId, title: movie.title, posterUrl: movie.posterUrl }} />
+          <FavoriteButton media={{ mediaType: "movie", tmdbId: movie.tmdbId, title: movie.title, posterUrl: movie.posterUrl }} />
         </div>
       </div>
 

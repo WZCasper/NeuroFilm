@@ -22,12 +22,14 @@ service cloud.firestore {
              .hasAny(['aiUnlimited', 'aiCredits', 'aiUsage']);
       allow delete: if false;
 
-      // favorites/{tmdbId}, history/{tmdbId} — личные подколлекции,
-      // читать и писать может только владелец аккаунта
-      match /favorites/{tmdbId} {
+      // favorites/{mediaKey}, history/{mediaKey} — личные подколлекции,
+      // читать и писать может только владелец аккаунта. mediaKey — это
+      // "movie-550" или "tv-1399" (см. types/media.ts: у фильма и
+      // сериала могут совпадать числовые tmdbId, это разные сущности)
+      match /favorites/{mediaKey} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
-      match /history/{tmdbId} {
+      match /history/{mediaKey} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
     }

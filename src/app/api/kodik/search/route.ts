@@ -9,10 +9,17 @@ interface KodikTranslation {
 interface KodikResult {
   translation?: KodikTranslation;
   link: string;
+  /** Только у сериалов: "1": { "1": "https://...", "2": "https://..." } */
+  episodes?: Record<string, Record<string, string>>;
+  season?: number;
 }
 
 interface KodikSearchResponse {
   results?: KodikResult[];
+}
+
+function normalizeLink(link: string): string {
+  return link.startsWith("http") ? link : `https:${link}`;
 }
 
 /**
@@ -21,6 +28,11 @@ interface KodikSearchResponse {
  * он остаётся на сервере, что чуть лучше, но сам факт токена и его
  * значение уже публичны в текущем index.html, так что это не смена
  * секрета, а просто более аккуратное расположение).
+ *
+ * Для сериалов (mediaType=tv) Kodik возвращает по результату на каждую
+ * пару озвучка+сезон, с полем episodes = { серия: ссылка }. Собираем
+ * это в единую карту сезон -> серия -> ссылка на озвучку — точно так
+ * же, как строилось seasons-block/episodes-list в прежней версии сайта.
  */
 export async function GET(request: NextRequest) {
   const token = process.env.KODIK_TOKEN;
@@ -31,6 +43,7 @@ export async function GET(request: NextRequest) {
   const imdbId = request.nextUrl.searchParams.get("imdbId");
   const tmdbId = request.nextUrl.searchParams.get("tmdbId");
   const title = request.nextUrl.searchParams.get("title") ?? "";
+  const mediaType = request.nextUrl.searchParams.get("mediaType") === "tv" ? "tv" : "movie";
 
   if (!imdbId && !tmdbId) {
     return NextResponse.json({ error: "Нужен imdbId или tmdbId" }, { status: 400 });
@@ -65,20 +78,50 @@ export async function GET(request: NextRequest) {
   const data = (await response.json()) as KodikSearchResponse;
   const results = data.results ?? [];
 
-  // Дедуплицируем по id озвучки — так же, как в прежней версии сайта:
-  // Kodik возвращает по результату на каждую комбинацию озвучка+эпизод,
-  // а нам для списка озвучек нужна только одна запись на каждую озвучку.
-  const dubsById = new Map<number, { id: number; title: string; type: string; url: string }>();
+  interface DubAccumulator {
+    id: number;
+    title: string;
+    type: string;
+    url: string;
+    episodes: Record<number, Record<number, string>>;
+  }
+
+  const dubsById = new Map<number, DubAccumulator>();
+
   for (const result of results) {
-    if (result.translation && !dubsById.has(result.translation.id)) {
-      dubsById.set(result.translation.id, {
-        id: result.translation.id,
+    if (!result.translation) continue;
+    const dubId = result.translation.id;
+
+    let dub = dubsById.get(dubId);
+    if (!dub) {
+      dub = {
+        id: dubId,
         title: result.translation.title,
         type: result.translation.type,
-        url: result.link.startsWith("http") ? result.link : `https:${result.link}`,
-      });
+        url: normalizeLink(result.link),
+        episodes: {},
+      };
+      dubsById.set(dubId, dub);
+    }
+
+    if (mediaType === "tv" && result.episodes) {
+      for (const [seasonStr, episodesMap] of Object.entries(result.episodes)) {
+        const season = Number(seasonStr);
+        if (!dub.episodes[season]) dub.episodes[season] = {};
+        for (const [episodeStr, link] of Object.entries(episodesMap)) {
+          dub.episodes[season][Number(episodeStr)] = normalizeLink(link);
+        }
+      }
     }
   }
 
-  return NextResponse.json({ dubs: Array.from(dubsById.values()) });
+  const dubs = Array.from(dubsById.values()).map((dub) => ({
+    id: dub.id,
+    title: dub.title,
+    type: dub.type,
+    url: dub.url,
+    episodes: Object.keys(dub.episodes).length > 0 ? dub.episodes : undefined,
+  }));
+
+  return NextResponse.json({ dubs });
 }

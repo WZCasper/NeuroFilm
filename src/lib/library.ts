@@ -2,29 +2,31 @@
 
 import { doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { mediaKey, type MediaType } from "@/types/media";
 
-export interface MovieLibraryRef {
+export interface MediaLibraryRef {
+  mediaType: MediaType;
   tmdbId: number;
   title: string;
   posterUrl: string;
 }
 
-export async function addFavorite(uid: string, movie: MovieLibraryRef): Promise<void> {
-  await setDoc(doc(db, "users", uid, "favorites", String(movie.tmdbId)), {
-    ...movie,
+export async function addFavorite(uid: string, media: MediaLibraryRef): Promise<void> {
+  await setDoc(doc(db, "users", uid, "favorites", mediaKey(media)), {
+    ...media,
     addedAt: serverTimestamp(),
   });
 }
 
-export async function removeFavorite(uid: string, tmdbId: number): Promise<void> {
-  await deleteDoc(doc(db, "users", uid, "favorites", String(tmdbId)));
+export async function removeFavorite(uid: string, media: Pick<MediaLibraryRef, "mediaType" | "tmdbId">): Promise<void> {
+  await deleteDoc(doc(db, "users", uid, "favorites", mediaKey(media)));
 }
 
-/** setDoc с merge — повторный просмотр того же фильма просто обновляет watchedAt, а не плодит дубли. */
-export async function logHistoryView(uid: string, movie: MovieLibraryRef): Promise<void> {
+/** setDoc с merge — повторный просмотр того же тайтла просто обновляет watchedAt, а не плодит дубли. */
+export async function logHistoryView(uid: string, media: MediaLibraryRef): Promise<void> {
   await setDoc(
-    doc(db, "users", uid, "history", String(movie.tmdbId)),
-    { ...movie, watchedAt: serverTimestamp() },
+    doc(db, "users", uid, "history", mediaKey(media)),
+    { ...media, watchedAt: serverTimestamp() },
     { merge: true }
   );
 }

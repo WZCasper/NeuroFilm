@@ -3,19 +3,19 @@
 import { Heart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
-import { addFavorite, removeFavorite, type MovieLibraryRef } from "@/lib/library";
+import { addFavorite, removeFavorite, type MediaLibraryRef } from "@/lib/library";
 
-export function FavoriteButton({ movie }: { movie: MovieLibraryRef }) {
+export function FavoriteButton({ media }: { media: MediaLibraryRef }) {
   const { user } = useAuth();
   const { isFavorite } = useFavorites();
-  const active = isFavorite(movie.tmdbId);
+  const active = isFavorite(media.mediaType, media.tmdbId);
 
   async function handleClick() {
     if (!user) return;
     if (active) {
-      await removeFavorite(user.uid, movie.tmdbId);
+      await removeFavorite(user.uid, media);
     } else {
-      await addFavorite(user.uid, movie);
+      await addFavorite(user.uid, media);
     }
   }
 

@@ -22,6 +22,7 @@ interface HomeContentProps {
 }
 
 interface TmdbSearchApiResult {
+  mediaType: "movie" | "tv";
   tmdbId: number;
   title: string;
   posterUrl: string | null;
@@ -47,13 +48,14 @@ export function HomeContent({ heroMovies, genres, popular, topRated, upcoming, n
 
     searchDebounceRef.current = setTimeout(() => {
       setIsSearching(true);
-      fetch(`/api/tmdb/search?query=${encodeURIComponent(trimmed)}`)
+      fetch(`/api/tmdb/search-multi?query=${encodeURIComponent(trimmed)}`)
         .then((res) => res.json())
         .then((data: { results?: TmdbSearchApiResult[] }) => {
           const results = (data.results ?? []).map((r) => ({
             tmdbId: r.tmdbId,
             title: r.title,
             posterUrl: r.posterUrl ?? "",
+            mediaType: r.mediaType,
           }));
           setSearchResults(results);
         })

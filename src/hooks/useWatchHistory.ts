@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { MediaType } from "@/types/media";
 
 export interface HistoryEntry {
+  mediaType: MediaType;
   tmdbId: number;
   title: string;
   posterUrl: string;

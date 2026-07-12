@@ -48,9 +48,9 @@ interface TmdbVideo {
 }
 
 /** Пробуем русский трейлер, при отсутствии — английский (как в прежней версии сайта). */
-export async function fetchTrailerKey(tmdbId: number): Promise<string | null> {
+export async function fetchTrailerKey(tmdbId: number, mediaType: "movie" | "tv" = "movie"): Promise<string | null> {
   async function videosFor(lang: string): Promise<TmdbVideo[]> {
-    const response = await fetch(`${TMDB_BASE}/movie/${tmdbId}/videos?language=${lang}`, {
+    const response = await fetch(`${TMDB_BASE}/${mediaType}/${tmdbId}/videos?language=${lang}`, {
       headers: tmdbHeaders(),
       next: { revalidate: 86400 },
     });
@@ -127,4 +127,77 @@ export interface TmdbGenre {
 export async function fetchGenres(): Promise<TmdbGenre[]> {
   const data = await tmdbGet<{ genres: TmdbGenre[] }>("/genre/movie/list", {}, 86400);
   return data?.genres ?? [];
+}
+
+// === Сериалы ===
+
+export interface TmdbTVDetails {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  first_air_date: string;
+  vote_average: number;
+  number_of_seasons: number;
+  genres: { id: number; name: string }[];
+}
+
+export async function fetchTVDetails(tmdbId: number): Promise<TmdbTVDetails | null> {
+  const response = await fetch(`${TMDB_BASE}/tv/${tmdbId}?language=ru-RU`, {
+    headers: tmdbHeaders(),
+    next: { revalidate: 3600 },
+  });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+export async function fetchTVExternalIds(tmdbId: number): Promise<{ imdbId: string | null }> {
+  const response = await fetch(`${TMDB_BASE}/tv/${tmdbId}/external_ids`, {
+    headers: tmdbHeaders(),
+    next: { revalidate: 86400 },
+  });
+  if (!response.ok) return { imdbId: null };
+  const data = (await response.json()) as { imdb_id?: string | null };
+  return { imdbId: data.imdb_id ?? null };
+}
+
+export interface TmdbSeasonEpisode {
+  episode_number: number;
+  name: string;
+  overview: string;
+  still_path: string | null;
+  air_date: string | null;
+}
+
+export async function fetchTVSeasonEpisodes(tmdbId: number, season: number): Promise<TmdbSeasonEpisode[]> {
+  const response = await fetch(`${TMDB_BASE}/tv/${tmdbId}/season/${season}?language=ru-RU`, {
+    headers: tmdbHeaders(),
+    next: { revalidate: 3600 },
+  });
+  if (!response.ok) return [];
+  const data = (await response.json()) as { episodes?: TmdbSeasonEpisode[] };
+  return data.episodes ?? [];
+}
+
+export async function fetchTVGenres(): Promise<TmdbGenre[]> {
+  const data = await tmdbGet<{ genres: TmdbGenre[] }>("/genre/tv/list", {}, 86400);
+  return data?.genres ?? [];
+}
+
+// === Общий поиск (фильмы + сериалы) ===
+
+export interface TmdbMultiSearchItem {
+  media_type: "movie" | "tv" | "person";
+  id: number;
+  title?: string; // фильм
+  name?: string; // сериал/персона
+  poster_path: string | null;
+  release_date?: string;
+  first_air_date?: string;
+}
+
+export async function fetchMultiSearch(query: string): Promise<TmdbMultiSearchItem[]> {
+  const data = await tmdbGet<{ results: TmdbMultiSearchItem[] }>("/search/multi", { query });
+  return (data?.results ?? []).filter((item) => item.media_type === "movie" || item.media_type === "tv");
 }
