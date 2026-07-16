@@ -491,7 +491,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:32px 4%;
           <span id="player-time" style="font-size:11px;color:rgba(255,255,255,0.7);white-space:nowrap;">0:00</span>
           <button onclick="playerFullscreen()" title="На весь экран" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">⛶</button>
         </div>
-        <iframe id="player-iframe" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; screen-wake-lock" referrerpolicy="no-referrer"
+        <iframe id="player-iframe" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; screen-wake-lock"
           onload="document.getElementById('player-loading-tip').style.display='none';document.getElementById('player-controls-overlay').style.display='flex';"
         ></iframe>
       </div>
@@ -559,7 +559,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:32px 4%;
     <div class="stats-sep"></div>
     <div class="stat-item"><div class="stat-num">100%</div><div class="stat-label">Бесплатно</div></div>
     <div class="stats-sep"></div>
-    <div class="stat-item"><div class="stat-num" id="stat-online">0</div><div class="stat-label">Онлайн</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-online">—</div><div class="stat-label">Просмотров</div></div>
     <div class="stats-sep"></div>
     <div class="stat-item"><div class="stat-num" id="stat-parties">0</div><div class="stat-label">Watch Party</div></div>
   </div>
@@ -1222,8 +1222,7 @@ async function openPlayer(m){
     <div class="player-info-item"><div class="player-info-label">Год</div><div class="player-info-val">${(m.release_date||'').slice(0,4)}</div></div>
     <div class="player-info-item"><div class="player-info-label">Язык</div><div class="player-info-val">${(m.original_language||'en').toUpperCase()}</div></div>
     <div class="player-info-item"><div class="player-info-label">Без регистрации</div><div class="player-info-val" style="color:var(--green)">✅ Бесплатно</div></div>
-    <div class="player-info-item"><div class="player-info-label">Защита</div><div class="player-info-val" style="color:var(--green)">🛡️ Вкл.</div></div>
-    <div class="player-info-item" style="margin-left:auto;"><div class="player-info-label">Онлайн</div><div class="player-info-val">${Math.floor(Math.random()*800+100)} 👁️</div></div>`;
+    <div class="player-info-item"><div class="player-info-label">Защита</div><div class="player-info-val" style="color:var(--green)">🛡️ Вкл.</div></div>`;
   // Сбрасываем состояние предыдущего фильма перед загрузкой нового
   currentDubId=''; currentSeason=1; currentEpisode=1; kodikData=null;
   renderPlayerStars(m.id);renderComments(m.id);addToHistory(m);
@@ -1471,16 +1470,15 @@ function renderPlayerStars(movieId){
 function hoverStars(v){document.querySelectorAll('#player-stars .star-btn').forEach(b=>b.className='star-btn'+(parseInt(b.dataset.v)<=v?' active':''));}
 function rateMovie(id,v){userRatings[id]=v;localStorage.setItem('nf_ratings',JSON.stringify(userRatings));renderPlayerStars(id);updateProfileStats();showToast(`⭐ Оценка ${v}/5 сохранена!`);pushNotif('⭐ Оценка','Ваша оценка сохранена и учтена в рейтинге','info');}
 
-// ── COMMENTS ──
-const DEMO=[{id:1,name:'Алексей К.',text:'Отличный фильм! Смотрел с женой, оба в восторге 🔥',time:'2 ч назад',likes:14,liked:false},{id:2,name:'Мария С.',text:'Качество видео супер, грузится моментально. NeuroFilm лучший!',time:'5 ч назад',likes:7,liked:false},{id:3,name:'Дмитрий Л.',text:'Спасибо за бесплатный просмотр без рекламы! 👍',time:'1 д назад',likes:23,liked:false}];
+// ── COMMENTS ── (только реальные — сохранённые в этом браузере)
 function renderComments(movieId){
   const list=document.getElementById('comments-list');
-  const comments=movieComments[movieId]||DEMO.map(c=>({...c}));
+  const comments=movieComments[movieId]||[];
   document.getElementById('comment-count').textContent=`(${comments.length})`;
-  list.innerHTML=comments.map((c,idx)=>`<div class="comment-item"><div class="comment-avatar">${c.name.charAt(0)}</div><div class="comment-body"><div class="comment-name">${c.name}<span class="comment-time">${c.time}</span></div><div class="comment-text">${c.text}</div><div class="comment-actions"><button class="comment-like${c.liked?' liked':''}" onclick="likeComment(${movieId},${idx})">👍 ${c.likes}</button><button class="comment-like">↩️ Ответить</button></div></div></div>`).join('');
+  list.innerHTML=comments.length?comments.map((c,idx)=>`<div class="comment-item"><div class="comment-avatar">${c.name.charAt(0)}</div><div class="comment-body"><div class="comment-name">${c.name}<span class="comment-time">${c.time}</span></div><div class="comment-text">${c.text}</div><div class="comment-actions"><button class="comment-like${c.liked?' liked':''}" onclick="likeComment(${movieId},${idx})">👍 ${c.likes}</button><button class="comment-like">↩️ Ответить</button></div></div></div>`).join(''):'<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Комментариев пока нет — будьте первым!</div>';
 }
 function likeComment(movieId,idx){
-  if(!movieComments[movieId])movieComments[movieId]=DEMO.map(c=>({...c}));
+  if(!movieComments[movieId])return;
   const c=movieComments[movieId][idx];if(!c)return;
   c.liked=!c.liked;c.likes+=c.liked?1:-1;
   localStorage.setItem('nf_comments',JSON.stringify(movieComments));renderComments(movieId);
@@ -1488,14 +1486,12 @@ function likeComment(movieId,idx){
 function submitComment(){
   const input=document.getElementById('comment-input');const text=input.value.trim();if(!text)return;
   const movieId=wpCurrentMovie?.id||0;
-  if(!movieComments[movieId])movieComments[movieId]=DEMO.map(c=>({...c}));
+  if(!movieComments[movieId])movieComments[movieId]=[];
   movieComments[movieId].unshift({id:Date.now(),name:user?user.tg||user.name:'Гость '+Math.floor(Math.random()*99),text,time:'Только что',likes:0,liked:false});
   localStorage.setItem('nf_comments',JSON.stringify(movieComments));input.value='';renderComments(movieId);showToast('💬 Комментарий добавлен!');
 }
 
 // ── WATCH PARTY ──
-const WP_NAMES=['Алексей','Мария','Дмитрий','Анна','Иван','Сергей','Ольга','Елена'];
-const WP_MSGS=['Готов! 🍿','Отлично, начинаем?','Несу попкорн!','🎬 Погнали!','Ура, наконец-то!','Жду всех!'];
 function openWatchParty(){
   document.getElementById('watchparty-modal').classList.add('active');
   document.getElementById('wp-movie-title').textContent=wpCurrentMovie?.title||'Watch Party';
@@ -1504,15 +1500,14 @@ function openWatchParty(){
   wpMembers=[{name:user?.tg||'Вы',online:true}];
   document.getElementById('wp-chat-msgs').innerHTML='';
   renderWPMembers();
-  setTimeout(()=>{const n=WP_NAMES[Math.floor(Math.random()*WP_NAMES.length)];wpMembers.push({name:n,online:true});renderWPMembers();pushNotif('👥 Watch Party',`${n} присоединился к комнате!`,'party');addWPMsg(n,WP_MSGS[Math.floor(Math.random()*WP_MSGS.length)]);},2500);
-  setTimeout(()=>{const n=WP_NAMES[Math.floor(Math.random()*WP_NAMES.length)];wpMembers.push({name:n,online:true});renderWPMembers();addWPMsg(n,WP_MSGS[Math.floor(Math.random()*WP_MSGS.length)]);},5000);
+  addWPMsg('Система','Код комнаты можно отправить друзьям, но синхронизация просмотра и чат в реальном времени в этой версии сайта не работают.');
 }
 function closeWatchParty(){document.getElementById('watchparty-modal').classList.remove('active');}
 function renderWPMembers(){document.getElementById('wp-members').innerHTML=wpMembers.map(m=>`<div class="wp-member${m.online?' online':''}" title="${m.name}">${m.name.charAt(0)}</div>`).join('');}
 function addWPMsg(name,text){const chat=document.getElementById('wp-chat-msgs');const div=document.createElement('div');div.className='wp-chat-msg';div.innerHTML=`<span class="wp-chat-name">${name}:</span> ${text}`;chat.appendChild(div);chat.scrollTop=chat.scrollHeight;}
-function sendWPMsg(){const inp=document.getElementById('wp-chat-input');const text=inp.value.trim();if(!text)return;addWPMsg(user?.tg||'Вы',text);inp.value='';const r=wpMembers.find(m=>m.name!==(user?.tg||'Вы'));if(r)setTimeout(()=>addWPMsg(r.name,WP_MSGS[Math.floor(Math.random()*WP_MSGS.length)]),1000+Math.random()*800);}
+function sendWPMsg(){const inp=document.getElementById('wp-chat-input');const text=inp.value.trim();if(!text)return;addWPMsg(user?.tg||'Вы',text);inp.value='';}
 function copyWPCode(){navigator.clipboard?.writeText(wpCurrentCode).then(()=>showToast('📋 Код скопирован: '+wpCurrentCode)).catch(()=>showToast('Код: '+wpCurrentCode));}
-function startWatchParty(){closeWatchParty();if(wpCurrentMovie)openPlayer(wpCurrentMovie);showToast(`👥 Watch Party начат! Участников: ${wpMembers.length}`);pushNotif('🎬 Просмотр начался','Наслаждайтесь фильмом вместе!','party');}
+function startWatchParty(){closeWatchParty();if(wpCurrentMovie)openPlayer(wpCurrentMovie);showToast('▶️ Просмотр начат');}
 function joinWatchParty(){const code=document.getElementById('wp-join-input').value.trim();if(code.length<4){showToast('⚠️ Введите код');return;}showToast(`✅ Вы вошли в комнату ${code}!`);closeWatchParty();if(wpCurrentMovie)openPlayer(wpCurrentMovie);pushNotif('👥 Watch Party',`Подключились к комнате ${code}`,'party');}
 function switchWPTab(tab,el){document.querySelectorAll('.wp-tab-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');document.getElementById('wp-create').className='wp-tab'+(tab==='create'?' active':'');document.getElementById('wp-join').className='wp-tab'+(tab==='join'?' active':'');}
 
@@ -1779,16 +1774,18 @@ const _origOpenPlayer=openPlayer;
 
 // ── ПУНКТ 5: Авто-определение рабочего плеера ──
 async function checkPlayerAndLoad(){
-  const urls=getPlayerUrls();
   loadSource(0); // Сразу грузим первый
-  // Через 4 сек проверяем — если iframe пустой, переключаем
+  // Раньше здесь читался iframe.contentDocument — это никогда не могло
+  // сработать: контент плеера с другого домена (kodik.info и т.п.), а
+  // same-origin policy браузера не даёт читать содержимое чужого iframe
+  // никаким способом. Это ограничение браузера, а не баг. Единственное,
+  // что можно честно проверить — сработал ли onload вообще.
   setTimeout(()=>{
-    const iframe=document.getElementById('player-iframe');
-    if(iframe&&(iframe.contentDocument?.body?.innerHTML?.length<50||!iframe.src)){
-      loadSource(1);
-      showToast('🔄 Переключаем на резервный плеер...');
+    const tip=document.getElementById('player-loading-tip');
+    if(tip&&tip.style.display!=='none'){
+      tip.innerHTML='<div style="font-size:40px;">⚠️</div><div style="font-size:15px;font-weight:700;">Источник не отвечает</div><div style="font-size:12px;color:var(--text3);text-align:center;max-width:280px;line-height:1.6;">Попробуйте другой плеер слева — балансеры иногда бывают недоступны.</div>';
     }
-  },5000);
+  },8000);
 }
 
 // ── ПУНКТ 9: Мобильное меню ──
@@ -1877,9 +1874,8 @@ async function initVisitorCounter(){
       }catch(e){}
     },30000);
   }catch(e){
-    // Fallback
     const el=document.getElementById('stat-online');
-    if(el) el.textContent=Math.floor(Math.random()*300+50).toLocaleString('ru');
+    if(el) el.textContent='—';
   }
 }
 initVisitorCounter();
