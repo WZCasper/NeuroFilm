@@ -487,14 +487,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:32px 4%;
           </div>
         </div>
         <!-- Оверлей управления поверх iframe -->
-        <div id="player-controls-overlay" style="position:absolute;bottom:0;left:0;right:0;z-index:10;background:linear-gradient(transparent,rgba(0,0,0,0.85));padding:14px 16px 10px;display:none;align-items:center;gap:10px;transition:.3s;">
-          <button onclick="playerCmd('pause')" title="Пауза/Играть" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;" id="btn-playpause">⏸</button>
-          <button onclick="playerCmd('stop')" title="Стоп" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">⏹</button>
-          <button onclick="skipIntro()" title="Пропустить титры/вступление" style="background:rgba(124,58,237,0.7);border:1px solid rgba(124,58,237,0.9);color:#fff;font-size:12px;font-weight:700;padding:0 12px;height:36px;border-radius:18px;cursor:pointer;white-space:nowrap;">⏭ Пропустить</button>
-          <div style="flex:1;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;cursor:pointer;position:relative;" onclick="playerSeek(event)" id="progress-bar">
-            <div id="progress-fill" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:.3s;pointer-events:none;"></div>
-          </div>
-          <span id="player-time" style="font-size:11px;color:rgba(255,255,255,0.7);white-space:nowrap;">0:00</span>
+        <div id="player-controls-overlay" style="position:absolute;bottom:0;right:0;z-index:10;padding:14px 16px;display:none;">
           <button onclick="playerFullscreen()" title="На весь экран" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">⛶</button>
         </div>
         <iframe id="player-iframe" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; screen-wake-lock"
@@ -557,9 +550,9 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:32px 4%;
     <div class="hero-slides" id="hero-dots"></div>
   </section>
   <div class="stats-bar" style="margin-top:0;">
-    <div class="stat-item"><div class="stat-num" id="stat-films">0</div><div class="stat-label">Фильмов</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-films">0</div><div class="stat-label">В каталоге TMDB</div></div>
     <div class="stats-sep"></div>
-    <div class="stat-item"><div class="stat-num" id="stat-series">0</div><div class="stat-label">Сериалов</div></div>
+    <div class="stat-item"><div class="stat-num" id="stat-series">0</div><div class="stat-label">В каталоге TMDB</div></div>
     <div class="stats-sep"></div>
     <div class="stat-item"><div class="stat-num">4</div><div class="stat-label">Плееров</div></div>
     <div class="stats-sep"></div>
@@ -737,8 +730,13 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:32px 4%;
 </footer>
 <script>
 const TMDB_KEY='8265bd1679663a7ea12ac168da84d2e8';
-const GEMINI_API='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 // Ключ Gemini API — вшит для всех пользователей сайта
+// ВНИМАНИЕ: этот ключ не в формате Google API (настоящие начинаются с
+// "AIzaSy"), поэтому каждый запрос к Gemini падает и чат работает
+// только в резервном режиме TMDB-поиска. Нужен реальный ключ из
+// aistudio.google.com/apikey — сгенерировать его может только владелец
+// Google-аккаунта проекта.
 const GEMINI_KEY='AQ.Ab8RN6KdQvtNjOnIpMm91oMtc37AxermrA4KoP4E10jnOQu_Wg';
 const TMDB='https://api.themoviedb.org/3';
 const IMG='https://image.tmdb.org/t/p/';
@@ -948,7 +946,7 @@ async function askAI(quickMsg){
       const q=extractSearchQuery(msg);
       if(q){const d=await tmdb('/search/movie',{query:q});tmdbResults=(d.results||[]).slice(0,5);tmdbResults.forEach(m=>allMovies[m.id]=m);}
     }catch(e){}
-    reply=buildSmartReply(msg,tmdbResults);
+    reply=(geminiFailed?'🔍 *ИИ временно недоступен, ищу по ключевым словам через TMDB:*\n\n':'')+buildSmartReply(msg,tmdbResults);
   }
 
   addAIMsg(reply,'bot');
@@ -1599,7 +1597,7 @@ async function updateStats(){
     }
   }catch(e){
     const el=document.getElementById('stat-films');
-    if(el)el.textContent='10 000+';
+    if(el)el.textContent='—';
   }
   try{
     const s=await tmdb('/tv/popular',{page:1});
@@ -1609,7 +1607,7 @@ async function updateStats(){
     }
   }catch(e){
     const el=document.getElementById('stat-series');
-    if(el)el.textContent='5 000+';
+    if(el)el.textContent='—';
   }
 }
 function animCount(id,target){const el=document.getElementById(id);if(!el)return;let c=0;const step=target/50;const t=setInterval(()=>{c=Math.min(c+step,target);el.textContent=Math.round(c).toLocaleString('ru');if(c>=target)clearInterval(t);},18);}
@@ -1633,47 +1631,7 @@ document.getElementById('main-footer').style.display='block';
 // 3. Замените 'NeuroFilmRuBot' в коде на реальный @username вашего бота
 // Пока бот не создан — форма входа через Telegram работать не будет.
 
-// ── ПУНКТ 2,3: Управление плеером ──
-let playerPaused=false;
-function playerCmd(cmd){
-  const iframe=document.getElementById('player-iframe');
-  if(!iframe||!iframe.contentWindow) return;
-  if(cmd==='pause'){
-    playerPaused=!playerPaused;
-    document.getElementById('btn-playpause').textContent=playerPaused?'▶':'⏸';
-    try{iframe.contentWindow.postMessage({action:playerPaused?'pause':'play'},'*');}catch(e){}
-  } else if(cmd==='stop'){
-    const src=iframe.src; iframe.src=''; setTimeout(()=>iframe.src=src,100);
-    playerPaused=false;
-    document.getElementById('btn-playpause').textContent='⏸';
-  }
-}
-function skipIntro(){
-  // Kodik поддерживает postMessage для skip через стандартный HTML5 postMessage API
-  // Это задокументированный интерфейс Kodik, в отличие от других плееров
-  const iframe=document.getElementById('player-iframe');
-  if(!iframe) return;
-  const src=iframe.src||'';
-  if(src.includes('kodik')){
-    try{
-      iframe.contentWindow.postMessage({type:'kodik',method:'skip_intro'},'*');
-      iframe.contentWindow.postMessage('skip','*');
-    }catch(e){}
-    showToast('⏭ Пропускаем вступление...');
-  } else {
-    // Для других плееров — просто показываем подсказку
-    showToast('⏭ Кнопка skip работает только в Kodik-плеере');
-  }
-}
-function playerSeek(e){
-  const bar=document.getElementById('progress-bar');
-  const pct=e.offsetX/bar.offsetWidth;
-  const iframe=document.getElementById('player-iframe');
-  if(iframe&&iframe.contentWindow){
-    try{iframe.contentWindow.postMessage({action:'seek',pct},'*');}catch(e){}
-  }
-  document.getElementById('progress-fill').style.width=(pct*100)+'%';
-}
+// ── Управление плеером ──
 function playerFullscreen(){
   const wrap=document.querySelector('.player-frame-wrap');
   const iframe=document.getElementById('player-iframe');
@@ -1742,8 +1700,6 @@ function openTrailer(){
   if(modal&&iframe){
     iframe.src=`https://www.youtube.com/embed/${currentTrailerKey}?autoplay=1&rel=0`;
     modal.style.display='flex';
-    // Пауза основного плеера
-    playerCmd('pause');
   }
 }
 function closeTrailer(){
