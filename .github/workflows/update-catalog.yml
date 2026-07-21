@@ -1,0 +1,30 @@
+name: Обновление каталога (фильмы/сериалы с русской озвучкой)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Собрать каталог
+        run: node scripts/update-catalog.js
+        env:
+          TMDB_KEY: 8265bd1679663a7ea12ac168da84d2e8
+          KODIK_TOKEN: 447d179e875efe8a77b
+      - name: Закоммитить, если есть изменения
+        run: |
+          git config user.name "NeuroFilm Catalog Bot"
+          git config user.email "actions@github.com"
+          git add data/catalog.json
+          git diff --cached --quiet || git commit -m "Автообновление каталога $(date -u +%Y-%m-%d)"
+          git push
