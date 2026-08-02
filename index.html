@@ -1260,8 +1260,8 @@ function getPlayerUrls(){
   return [
     // 1. Kodik — главный, имеет реальные русские озвучки и skip-intro тайминги
     imdb
-      ? `https://kodik.info/find-player?token=${KODIK_TOKEN}&title=${encodeURIComponent(currentTitle)}&imdb_id=${imdb}&only_season=${currentSeason}&only_episode=${currentEpisode}&translation_id=${currentDubId}`
-      : `https://kodik.info/find-player?token=${KODIK_TOKEN}&title=${encodeURIComponent(currentTitle)}&kinopoisk_id=${tmdb}&translation_id=${currentDubId}`,
+      ? `https://kodik-api.com/find-player?token=${KODIK_TOKEN}&title=${encodeURIComponent(currentTitle)}&imdb_id=${imdb}&only_season=${currentSeason}&only_episode=${currentEpisode}&translation_id=${currentDubId}`
+      : `https://kodik-api.com/find-player?token=${KODIK_TOKEN}&title=${encodeURIComponent(currentTitle)}&kinopoisk_id=${tmdb}&translation_id=${currentDubId}`,
     // 2. VideoCDN — обширная база фильмов
     imdb
       ? `https://videocdn.tv/api?token=${VIDEOCDN_TOKEN}&imdb_id=${imdb}&show_page=1`
@@ -1293,7 +1293,7 @@ async function loadKodikDubs(){
     const query = imdb
       ? `imdb_id=${imdb}`
       : `kinopoisk_id=${tmdb}`;
-    const url = `https://kodikapi.com/search?token=${KODIK_TOKEN}&${query}&with_material_data=true&with_episodes=true`;
+    const url = `https://kodik-api.com/search?token=${KODIK_TOKEN}&${query}&with_material_data=true&with_episodes=true`;
     const resp = await fetch(url);
     const data = await resp.json();
     kodikData = data;
@@ -1738,7 +1738,7 @@ const _origOpenPlayer=openPlayer;
 async function checkPlayerAndLoad(){
   loadSource(0); // Сразу грузим первый
   // Раньше здесь читался iframe.contentDocument — это никогда не могло
-  // сработать: контент плеера с другого домена (kodik.info и т.п.), а
+  // сработать: контент плеера с другого домена (kodik-api.com и т.п.), а
   // same-origin policy браузера не даёт читать содержимое чужого iframe
   // никаким способом. Это ограничение браузера, а не баг. Единственное,
   // что можно честно проверить — сработал ли onload вообще.

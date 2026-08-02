@@ -25,7 +25,7 @@ async function checkKodik(tmdbId, mediaType, title) {
   const params = new URLSearchParams({ token: KODIK_TOKEN, title, kinopoisk_id: String(tmdbId), limit: '1' });
   let available = false;
   try {
-    const res = await fetch(`https://kodikapi.com/search?${params}`);
+    const res = await fetch(`https://kodik-api.com/search?${params}`);
     if (res.ok) {
       const data = await res.json();
       available = Array.isArray(data.results) && data.results.length > 0;
