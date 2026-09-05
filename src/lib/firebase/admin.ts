@@ -2,6 +2,7 @@ import "server-only";
 import { initializeApp, getApps, cert, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
 
 /**
  * Инициализация Firebase Admin SDK. Работает ТОЛЬКО на сервере
@@ -39,3 +40,4 @@ function createAdminApp(): App {
 const adminApp = createAdminApp();
 export const adminAuth = getAuth(adminApp);
 export const adminDb = getFirestore(adminApp);
+export const adminMessaging = getMessaging(adminApp);

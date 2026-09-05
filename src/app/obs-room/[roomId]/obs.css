@@ -34,8 +34,9 @@
   overflow: hidden;
 }
 
-/* В плеере на OBS-роуте скрываем вкладки — это управление хоста, не для эфира */
-.obs-player-frame [role="tablist"] {
+/* Вкладки плеера и переключатель озвучек — управление зрителя, не для эфира */
+.obs-player-frame [role="tablist"],
+.obs-player-frame [role="group"] {
   display: none;
 }
 
